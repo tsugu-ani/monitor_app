@@ -1,8 +1,16 @@
 'use strict';
 
-async function analyzeImage(blob) {
+async function fetchMonitorOptions() {
+    const res = await fetch('/api/monitors');
+    if (!res.ok) return [];
+    const json = await res.json();
+    return json.monitors || [];
+}
+
+async function analyzeImage(blob, monitorType = '') {
     const formData = new FormData();
     formData.append('file', blob, 'capture.jpg');
+    formData.append('monitor_type', monitorType);
 
     const response = await fetch('/api/analyze', {
         method: 'POST',

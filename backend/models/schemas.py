@@ -29,4 +29,6 @@ class VitalData(BaseModel):
 class AnalyzeResponse(BaseModel):
     success: bool
     data: Optional[VitalData] = None
+    monitor_type: Optional[str] = None
+    auto_detected: bool = False  # True: monitor_type が自動識別された
     error: Optional[str] = None

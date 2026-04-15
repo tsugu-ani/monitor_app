@@ -28,16 +28,19 @@ backend/uploads/*
 # Vercel
 .vercel/
 
-# IDE
+# IDE / ツール設定（ローカル専用）
 .vscode/
 .idea/
 *.swp
 *.swo
+.claude/
 
 # OS
 .DS_Store
 Thumbs.db
 desktop.ini
+# WSL の NTFS 代替データストリームファイル
+*:Zone.Identifier
 
 # ログ
 *.log

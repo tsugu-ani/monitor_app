@@ -1,0 +1,44 @@
+# 環境変数（最重要）
+.env
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+venv/
+env/
+.venv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# uv
+# uv.lock はコミット対象（再現性確保のため除外しない）
+
+# アップロードファイル（一時ファイル）
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# Vercel
+.vercel/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ログ
+*.log
+logs/

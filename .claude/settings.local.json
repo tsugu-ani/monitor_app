@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git init *)",
+      "Bash(pip3 --version)",
+      "Bash(python3 -m pip --version)",
+      "Bash(python3 -c \"import fastapi\")",
+      "Read(//usr/bin/**)",
+      "Read(//usr/local/bin/**)",
+      "Bash(command -v conda)",
+      "Bash(command -v pyenv)",
+      "Bash(python3 -c ' *)",
+      "Bash(uv --version)",
+      "Bash(uv sync *)",
+      "Bash(uv run *)",
+      "Bash(curl -s http://localhost:8000/health)",
+      "Bash(kill %1)",
+      "Bash(ngrok version *)",
+      "Bash(curl -sSL https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.tgz)",
+      "Bash(tar -xz -C /usr/local/bin)",
+      "Bash(tar -xz -C /home/tsugu/.local/bin)",
+      "Bash(chmod +x *)",
+      "Bash(ngrok config *)",
+      "Bash(cloudflared --version)",
+      "Bash(curl -sSL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o /home/tsugu/.local/bin/cloudflared)"
+    ]
+  }
+}

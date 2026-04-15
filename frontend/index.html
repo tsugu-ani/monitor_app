@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>モニター情報読取</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<header class="app-header">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+    </svg>
+    <h1>モニター情報読取</h1>
+</header>
+
+<main>
+    <!-- カメラセクション -->
+    <section class="camera-section">
+        <div class="camera-viewport">
+            <video id="video" autoplay playsinline muted></video>
+            <canvas id="canvas"></canvas>
+
+            <!-- カメラエラー表示 -->
+            <div id="camera-error" class="camera-error hidden">
+                <div class="error-icon">📷</div>
+                <p>カメラにアクセスできませんでした。</p>
+            </div>
+
+            <!-- 解析中オーバーレイ -->
+            <div id="analyzing-overlay" class="analyzing-overlay hidden">
+                <div class="spinner"></div>
+                <span>解析中...</span>
+            </div>
+        </div>
+
+        <button id="capture-btn" class="capture-btn" type="button">
+            <span class="capture-icon"></span>
+            撮影して解析
+        </button>
+    </section>
+
+    <!-- エラーバナー -->
+    <div id="error-banner" class="error-banner hidden"></div>
+
+    <!-- 結果セクション -->
+    <section id="results" class="results hidden">
+        <p id="capture-time" class="results-meta"></p>
+
+        <div id="vital-groups"></div>
+
+        <!-- Claude からの補足ノート -->
+        <div id="notes-card" class="notes-card hidden">
+            <strong>補足情報</strong>
+            <span id="notes-text"></span>
+        </div>
+    </section>
+</main>
+
+<script src="/js/camera.js"></script>
+<script src="/js/api.js"></script>
+<script src="/js/app.js"></script>
+</body>
+</html>

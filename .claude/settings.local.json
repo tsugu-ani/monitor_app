@@ -33,7 +33,11 @@
       "Bash(gh auth *)",
       "Bash(ssh *)",
       "Read(//home/tsugu/.ssh/**)",
-      "Bash(ssh-keyscan -t ed25519,rsa github.com)"
+      "Bash(ssh-keyscan -t ed25519,rsa github.com)",
+      "Bash(sudo apt-get *)",
+      "Bash(uv add *)",
+      "Bash(git restore *)",
+      "Bash(ls -lh image/*.pdf)"
     ]
   }
 }

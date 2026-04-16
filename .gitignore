@@ -42,6 +42,10 @@ desktop.ini
 # WSL の NTFS 代替データストリームファイル
 *:Zone.Identifier
 
+# 参考資料（大容量カタログは除外・PI仕様書はコミット対象）
+image/*-br-*.pdf
+image/*brochure*.pdf
+
 # ログ
 *.log
 logs/

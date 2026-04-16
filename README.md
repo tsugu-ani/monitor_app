@@ -172,10 +172,20 @@ git add . && git commit -m "update" && git push
 |---|---|
 | フロントエンド | HTML / CSS / Vanilla JavaScript |
 | バックエンド | Python / FastAPI |
-| AI | Anthropic Claude Vision API (`claude-sonnet-4-6`) |
+| AI | Anthropic Claude Vision API（デフォルト: `claude-sonnet-4-6`） |
 | 画像処理 | Pillow |
 | パッケージ管理 | uv |
 | デプロイ | Vercel（サーバーレス）|
+
+### 使用 AI モデルの変更
+
+`.env` の `CLAUDE_MODEL` を変更することでモデルを切り替えられます。
+
+```
+CLAUDE_MODEL=claude-opus-4-6          # 最高精度（低速・高コスト）
+CLAUDE_MODEL=claude-sonnet-4-6        # バランス型（デフォルト）
+CLAUDE_MODEL=claude-haiku-4-5-20251001  # 高速・低コスト
+```
 
 ## ディレクトリ構成
 
@@ -183,14 +193,18 @@ git add . && git commit -m "update" && git push
 monitor_app/
 ├── api/                  # Vercel サーバーレス関数エントリポイント
 │   └── index.py
+├── image/                # Skill 作成の参考資料（PI 仕様書 PDF）
+│   ├── Vista-300-pi-102414-ja-JP.pdf
+│   └── Atlan-A100-A100-XL-pi-102413-ja-JP.pdf
 ├── backend/              # FastAPI バックエンド
 │   ├── main.py
 │   ├── config.py
 │   ├── pyproject.toml
 │   ├── api/
-│   │   └── vision.py     # POST /api/analyze
+│   │   └── vision.py     # GET /api/monitors・POST /api/analyze
 │   ├── services/
-│   │   ├── claude_service.py
+│   │   ├── claude_service.py   # Claude API 呼び出し・自動識別
+│   │   ├── monitor_skills.py   # 機種別 Skill 定義
 │   │   └── image_service.py
 │   └── models/
 │       └── schemas.py
@@ -214,3 +228,5 @@ monitor_app/
 - `ANTHROPIC_API_KEY` は `.env` に記載し、Git にコミットしないこと
 - 本アプリは **補助ツール** です。表示された値を医療判断の唯一の根拠にしないでください
 - 画像認識の精度はモニターの種類・撮影角度・照明条件によって異なります
+- 機種自動識別を使用した場合は 2 回の API 呼び出しが発生します（識別 + 読み取り）
+- 機種が正しく認識されない場合はモニター種別セレクタで手動選択してください

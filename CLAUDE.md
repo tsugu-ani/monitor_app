@@ -135,6 +135,17 @@ Claude Vision API でバイタル情報抽出（2回目 or 1回目の API 呼び
 
 モニター機種ごとの画面特性を記述した **Skill** を Claude へのプロンプトに追加することで、読み取り精度を向上させる仕組み。
 
+### 共通注意事項（_COMMON_CAUTIONS）
+
+すべての Skill に共通して付加される注意事項が `_COMMON_CAUTIONS` 定数に定義されている。
+混同しやすい以下の3項目について Claude への明示的な指示を与えている。
+
+| 項目 | 誤読パターン | 正しい挙動 |
+|---|---|---|
+| 血圧（NIBP vs ART） | 非観血と観血の混同 | ART（観血）が表示されている場合は ART を優先。使用種別を `notes` に記録 |
+| ISO ダイヤル vs ISO In/Et | ダイヤル設定値を濃度と誤認 | `iso_dial` は常に `null`（物理ダイヤルのため画面に表示されない） |
+| FiO2 vs ガス流量 O2/Air | 吸入酸素濃度と流量の混同 | `fio2` は画面の O₂ 濃度値。`gas_flow_o2/air` は流量計の値（画面外なら `null`） |
+
 ### 機種自動識別
 
 「機種指定なし（generic）」または未選択の場合、以下の2ステップで処理する。
@@ -202,15 +213,29 @@ Claude Vision API でバイタル情報抽出（2回目 or 1回目の API 呼び
 | FiO2 | `O₂` | — | `O₂ Fi` または `FiO₂` 吸気側 | |
 | 体温 | `TEMP` または `T1` [°C] | `TEMP`/`T1`（橙） | — | 下部の参照範囲ラベルは無視 |
 
+### Skill 作成の参考資料
+
+`image/` ディレクトリに各機種の製品情報（PI）PDF を保管している。
+新しい Skill を追加する際はメーカーの仕様書・PI を参照すること。
+
+| ファイル | 機種 | 種別 |
+|---|---|---|
+| `image/Vista-300-pi-102414-ja-JP.pdf` | Dräger Vista 300 | 製品情報（PI） |
+| `image/Atlan-A100-A100-XL-pi-102413-ja-JP.pdf` | Dräger Atlan A100/A100 XL | 製品情報（PI） |
+
+> カタログ（brochure）は容量が大きいため `.gitignore` で除外している。PI のみリポジトリに含まれる。
+
 ### 新しい Skill の追加手順
 
-1. `monitor_skills.py` の `MONITOR_SKILLS` に新エントリを追加
-2. `MONITOR_OPTIONS` にも UI 表示用エントリを追加
-3. `prompt_hint` に以下の情報を日本語で記述:
-   - 機種名・画面レイアウト
-   - 各パラメータの表示位置・色・単位
+1. メーカーの PI・仕様書で画面レイアウトとパラメータ表示を確認する
+2. `monitor_skills.py` の `MONITOR_SKILLS` に新エントリを追加
+3. `MONITOR_OPTIONS` にも UI 表示用エントリを追加
+4. `prompt_hint` に以下の情報を日本語で記述:
+   - 機種名・画面サイズ・レイアウト
+   - 各パラメータの表示位置・ラベル・色・単位
    - 表示形式の特徴（分数形式・小数点・略語など）
-   - 読み取り時の注意点
+   - 読み取り時の注意点（機種固有の混同しやすい項目）
+5. `_IDENTIFY_PROMPT`（`claude_service.py`）に新機種の識別特徴を追記する
 
 ## アーキテクチャ
 
@@ -231,32 +256,45 @@ Claude Vision API でバイタル情報抽出（2回目 or 1回目の API 呼び
 ```
 monitor_app/
 ├── CLAUDE.md
+├── README.md
 ├── .env                          # 環境変数（git管理外）
 ├── .env.example                  # 環境変数テンプレート
 ├── .gitignore
+├── vercel.json                   # Vercel ルーティング設定
+├── requirements.txt              # Vercel 用 Python 依存パッケージ
+├── start.sh                      # uvicorn + Cloudflare Tunnel 同時起動スクリプト
+│
+├── api/
+│   └── index.py                  # Vercel サーバーレス関数エントリポイント
+│
+├── image/                        # Skill 作成の参考資料（PI 仕様書）
+│   ├── Vista-300-pi-102414-ja-JP.pdf
+│   └── Atlan-A100-A100-XL-pi-102413-ja-JP.pdf
 │
 ├── backend/                      # FastAPI バックエンド
 │   ├── main.py                   # アプリエントリポイント・ルーター統合
 │   ├── config.py                 # 設定・環境変数読み込み
-│   ├── requirements.txt
+│   ├── pyproject.toml            # uv プロジェクト定義・依存パッケージ
+│   ├── uv.lock                   # 依存ロックファイル
 │   ├── api/
 │   │   ├── __init__.py
-│   │   └── vision.py             # /api/analyze エンドポイント
+│   │   └── vision.py             # GET /api/monitors・POST /api/analyze
 │   ├── services/
 │   │   ├── __init__.py
-│   │   ├── claude_service.py     # Claude API クライアント・プロンプト管理
+│   │   ├── claude_service.py     # Claude API 呼び出し・Skill 適用・自動識別
+│   │   ├── monitor_skills.py     # 機種別 Skill 定義（MONITOR_SKILLS / MONITOR_OPTIONS）
 │   │   └── image_service.py      # 画像前処理・Base64変換・バリデーション
 │   ├── models/
 │   │   ├── __init__.py
-│   │   └── schemas.py            # Pydantic モデル（リクエスト/レスポンス定義）
-│   └── uploads/                  # アップロード画像の一時保存
+│   │   └── schemas.py            # Pydantic モデル（VitalData / AnalyzeResponse）
+│   └── uploads/                  # アップロード画像の一時保存（起動時クリア推奨）
 │
 └── frontend/                     # 静的 HTML/CSS/JS（FastAPI から配信）
     ├── index.html
     ├── css/
     │   └── style.css
     └── js/
-        ├── app.js                # メインロジック・状態管理
+        ├── app.js                # メインロジック・状態管理・自動検出バッジ
         ├── camera.js             # カメラキャプチャ処理（getUserMedia API）
         └── api.js                # バックエンド API 通信
 ```
@@ -265,9 +303,13 @@ monitor_app/
 
 | ディレクトリ/ファイル | 役割 |
 |---|---|
+| `image/` | Skill 作成の参考資料（PI 仕様書 PDF）。カタログは除外済み |
+| `api/index.py` | Vercel サーバーレス関数エントリポイント |
 | `backend/` | FastAPI サーバー一式 |
 | `backend/api/` | HTTP エンドポイント定義 |
-| `backend/services/` | ビジネスロジック（Claude API 呼び出し・画像処理） |
+| `backend/services/claude_service.py` | Claude API 呼び出し・Skill 適用・自動識別ロジック |
+| `backend/services/monitor_skills.py` | 機種別 Skill 定義（`MONITOR_SKILLS`・`MONITOR_OPTIONS`） |
+| `backend/services/image_service.py` | 画像前処理・リサイズ・Base64 変換・バリデーション |
 | `backend/models/` | リクエスト/レスポンスの Pydantic データモデル |
 | `backend/uploads/` | アップロード画像の一時保存（起動時クリア推奨） |
 | `frontend/` | 静的 HTML/CSS/JS。FastAPI から `/` で配信される |
@@ -401,9 +443,19 @@ git add . && git commit -m "update" && git push
 - Claude Vision の画像サイズ上限: 5MB / 推奨: 1568px 以下にリサイズして送信
 
 ### モデル・API
-- モデルは `claude-sonnet-4-6` を使用（変更は `.env` の `CLAUDE_MODEL` で設定）
+- デフォルトモデルは `claude-sonnet-4-6`（変更は `.env` の `CLAUDE_MODEL` で設定）
 - Claude への指示はバイタル項目の **JSON 構造化出力** を要求するプロンプトとする
 - レスポンス JSON には全 17 項目を必ず含め、読み取れない項目は `null` とする
+
+#### モデル選択の目安
+
+| モデル | 特徴 | 用途 |
+|---|---|---|
+| `claude-opus-4-6` | 最高精度・低速・高コスト | 読み取り精度を最優先する場合 |
+| `claude-sonnet-4-6` | バランス型（デフォルト） | 通常運用 |
+| `claude-haiku-4-5-20251001` | 高速・低コスト | コスト削減・レスポンス速度優先 |
+
+機種自動識別（ステップ1）と読み取り（ステップ2）は両方とも `CLAUDE_MODEL` で指定したモデルを使用する。
 
 ### 実装禁止事項
 - ファイルアップロード入力（`<input type="file">`）は UI に設けない

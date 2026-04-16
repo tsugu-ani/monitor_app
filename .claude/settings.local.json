@@ -22,7 +22,18 @@
       "Bash(chmod +x *)",
       "Bash(ngrok config *)",
       "Bash(cloudflared --version)",
-      "Bash(curl -sSL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o /home/tsugu/.local/bin/cloudflared)"
+      "Bash(curl -sSL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o /home/tsugu/.local/bin/cloudflared)",
+      "Bash(curl -s http://localhost:8000/)",
+      "WebSearch",
+      "Bash(python3 *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(git config *)",
+      "Bash(gh auth *)",
+      "Bash(ssh *)",
+      "Read(//home/tsugu/.ssh/**)",
+      "Bash(ssh-keyscan -t ed25519,rsa github.com)"
     ]
   }
 }

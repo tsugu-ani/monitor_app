@@ -77,7 +77,7 @@
 | 機種 | 選択 ID | 自動識別 |
 |---|---|---|
 | フクダエム・イー工業 Bio-Scope AM140（動物用） | `fukuda_am140` | ✓ |
-| Dräger Vista 300 + 麻酔器（2画面構成） | `drager_vista300` | ✓ |
+| Dräger Vista 300 + Atlan A100（2画面構成） | `drager_vista300` | ✓ |
 | その他・機種不明 | `generic`（汎用） | — |
 
 ---

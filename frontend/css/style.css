@@ -46,14 +46,17 @@ html, body {
 .app-header {
     background: var(--header-bg);
     color: #fff;
-    padding: 13px 16px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
     position: sticky;
     top: 0;
     z-index: 50;
     box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+}
+
+.header-row {
+    padding: 13px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .header-icon { flex-shrink: 0; }
@@ -69,6 +72,36 @@ html, body {
     font-size: 11px;
     color: rgba(255,255,255,0.6);
     white-space: nowrap;
+}
+
+/* ===== タブバー ===== */
+.tab-bar {
+    display: flex;
+    border-top: 1px solid rgba(255,255,255,0.12);
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 10px;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.55);
+    cursor: pointer;
+    letter-spacing: 0.03em;
+    transition: color 0.15s, border-color 0.15s;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.tab-btn.active {
+    color: #fff;
+    border-bottom-color: #fff;
+}
+
+.tab-btn:not(.active):hover {
+    color: rgba(255,255,255,0.8);
 }
 
 /* ===== メインコンテンツ ===== */
@@ -452,7 +485,6 @@ main {
     border-radius: var(--radius);
     overflow: hidden;
     box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-    margin-top: 12px;
 }
 
 .history-title {

@@ -49,6 +49,26 @@ const analyzingOverlay  = document.getElementById('analyzing-overlay');
 
 const camera = new Camera(video, canvas);
 
+// ===== タブ切り替え =====
+const tabBtns   = document.querySelectorAll('.tab-btn');
+const tabPanels = {
+    capture: document.getElementById('tab-capture'),
+    history: document.getElementById('tab-history'),
+};
+
+tabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+        const tab = btn.dataset.tab;
+        tabBtns.forEach(b => {
+            b.classList.toggle('active', b === btn);
+            b.setAttribute('aria-selected', b === btn);
+        });
+        Object.entries(tabPanels).forEach(([key, panel]) => {
+            panel.classList.toggle('hidden', key !== tab);
+        });
+    });
+});
+
 // ===== 初期化 =====
 buildVitalGrid();
 initMonitorSelect();

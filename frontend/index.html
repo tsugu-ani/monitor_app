@@ -13,55 +13,67 @@
 
 <!-- ===== メイン画面（常時表示） ===== -->
 <header class="app-header">
-    <svg class="header-icon" width="20" height="20" viewBox="0 0 24 24" fill="none"
-         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-    </svg>
-    <h1>モニター情報読取</h1>
-    <span id="capture-time" class="capture-time"></span>
+    <div class="header-row">
+        <svg class="header-icon" width="20" height="20" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+        </svg>
+        <h1>モニター情報読取</h1>
+        <span id="capture-time" class="capture-time"></span>
+    </div>
+    <div class="tab-bar" role="tablist">
+        <button class="tab-btn active" data-tab="capture" role="tab" aria-selected="true">撮影</button>
+        <button class="tab-btn" data-tab="history" role="tab" aria-selected="false">撮影記録</button>
+    </div>
 </header>
 
 <main>
-    <!-- モニター種別選択 + 撮影ボタン -->
-    <div class="action-bar">
-        <div class="monitor-select-row">
-            <label class="monitor-select-label" for="monitor-select">モニター種別</label>
-            <select id="monitor-select" class="monitor-select">
-                <!-- JS で /api/monitors から動的に生成 -->
-            </select>
+    <!-- ===== 撮影タブ ===== -->
+    <div id="tab-capture" class="tab-panel">
+
+        <!-- モニター種別選択 + 撮影ボタン -->
+        <div class="action-bar">
+            <div class="monitor-select-row">
+                <label class="monitor-select-label" for="monitor-select">モニター種別</label>
+                <select id="monitor-select" class="monitor-select">
+                    <!-- JS で /api/monitors から動的に生成 -->
+                </select>
+            </div>
+            <button id="capture-btn" class="capture-btn" type="button">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <circle cx="12" cy="12" r="3" fill="currentColor"/>
+                </svg>
+                撮影開始
+            </button>
         </div>
-        <button id="capture-btn" class="capture-btn" type="button">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-                 stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="10"/>
-                <circle cx="12" cy="12" r="3" fill="currentColor"/>
-            </svg>
-            撮影開始
-        </button>
+
+        <!-- エラーバナー -->
+        <div id="error-banner" class="error-banner hidden"></div>
+
+        <!-- 自動検出バッジ -->
+        <div id="detected-monitor" class="detected-monitor hidden"></div>
+
+        <!-- バイタル項目グリッド（常時表示） -->
+        <div id="vital-groups"></div>
+
+        <!-- 補足ノート -->
+        <div id="notes-card" class="notes-card hidden">
+            <strong>補足情報</strong>
+            <span id="notes-text"></span>
+        </div>
+
     </div>
 
-    <!-- エラーバナー -->
-    <div id="error-banner" class="error-banner hidden"></div>
-
-    <!-- 自動検出バッジ -->
-    <div id="detected-monitor" class="detected-monitor hidden"></div>
-
-    <!-- バイタル項目グリッド（常時表示） -->
-    <div id="vital-groups"></div>
-
-    <!-- 補足ノート -->
-    <div id="notes-card" class="notes-card hidden">
-        <strong>補足情報</strong>
-        <span id="notes-text"></span>
-    </div>
-
-    <!-- 撮影記録 -->
-    <section class="history-section">
-        <h2 class="history-title">撮影記録</h2>
-        <div id="history-list" class="history-list">
-            <p class="history-empty">記録がありません</p>
+    <!-- ===== 撮影記録タブ ===== -->
+    <div id="tab-history" class="tab-panel hidden">
+        <div class="history-section">
+            <div id="history-list" class="history-list">
+                <p class="history-empty">記録がありません</p>
+            </div>
         </div>
-    </section>
+    </div>
 </main>
 
 

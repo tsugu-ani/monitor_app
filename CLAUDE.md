@@ -2,7 +2,7 @@
 
 ## プロジェクト概要
 
-スマートフォン・タブレット等のデバイスのカメラで生体情報モニター（バイタルモニター・麻酔器等）の画面を撮影し、Claude Vision API で必要な医療情報を抽出して Web UI に表示するアプリケーション。
+スマートフォン・タブレット等のデバイスのカメラで生体情報モニター（バイタルモニター・麻酔器等）の画面を撮影し、Claude Vision API で必要な医療情報を抽出して Web UI に表示・記録するアプリケーション。
 
 ## アプリケーション仕様・制約
 
@@ -20,18 +20,18 @@
 Canvas でフレームキャプチャ → バックエンドへ送信
        ↓ POST /api/analyze  (monitor_type を同送)
        ↓
-  [機種選択あり] → 選択 Skill を直接適用
-  [機種選択なし] → Claude が機種を自動識別（1回目の API 呼び出し）
+  [機種選択あり] → 選択 Skill を直接適用（API 1回）
+  [機種選択なし] → Haiku + 768px 縮小画像で機種を自動識別（API 1回目）
                         ↓ 識別結果の Skill を適用
-Claude Vision API でバイタル情報抽出（2回目 or 1回目の API 呼び出し）
+Claude Vision API でバイタル情報抽出（API 最終回）
        ↓
-抽出結果を Web UI に構造化して表示
+抽出結果を Web UI に表示 ＋ Supabase DB に自動保存
 自動識別時は「自動検出: 機種名」バッジを表示
 ```
 
 ### 3. 読み取り対象項目
 
-以下の項目を抽出対象とする。読み取れなかった項目は `null`（未検出）として扱い、UI 上で明示的に「---」や「読取不可」と表示する。
+以下の項目を抽出対象とする。読み取れなかった項目は `null`（未検出）として扱い、UI 上で明示的に「---」と表示する。
 
 #### 基本バイタル情報
 
@@ -62,7 +62,7 @@ Claude Vision API でバイタル情報抽出（2回目 or 1回目の API 呼び
 
 ### 4. 読み取れなかった場合の扱い
 
-- 抽出できなかった項目は `null` で返却し、UI では「**---**」または「**読取不可**」と表示する
+- 抽出できなかった項目は `null` で返却し、UI では「**---**」と表示する
 - 部分的に読み取れた場合（例: 数値は読めたが単位が不明）も `null` として扱い、備考欄に補足を記載する
 - 解析エラー全体の場合はエラーメッセージをユーザーに明示する
 
@@ -70,21 +70,34 @@ Claude Vision API でバイタル情報抽出（2回目 or 1回目の API 呼び
 
 #### 画面構成
 
-画面は **シングルページ**（遷移・切り替えなし）。バイタル項目は常時表示し、モーダルでカメラ操作を行う。
+画面は **シングルページ（SPA）**。ヘッダーにタブバーを組み込み、「撮影」「撮影記録」の2タブで切り替える。
 
 ```
 ┌──────────────────────────────┐
-│ ≈ モニター情報読取  最終撮影: │  ← ヘッダー（常時固定）
+│ ≈ モニター情報読取  12:34    │  ← ヘッダー（sticky）
+├──────────────┬───────────────┤
+│     撮影     │   撮影記録    │  ← タブバー（sticky、ヘッダー内）
 ├──────────────────────────────┤
-│        [◉ 撮影開始]           │  ← 撮影ボタン（常時表示）
-├──────────────────────────────┤
+│ [撮影タブ]                    │
+│ モニター種別 [機種指定なし▼]  │
+│     [◉ 撮影開始]              │
 │ 基本バイタル                  │
 │ ┌─────────┬─────────┐        │
-│ │ 心拍数   │血圧(収縮)│        │  ← 未撮影: "---"（点線下線・グレー）
-│ │  ---    │  ---    │        │     取得済: 数値（黒・実線なし）
-│ └─────────┴─────────┘        │     読取不可: "---"（点線・薄グレー）
+│ │ 心拍数   │血圧(収縮)│        │
+│ │  ---    │  ---    │        │
+│ └─────────┴─────────┘        │
 │ 呼吸器・麻酔器                │
 │  ...（同様）                  │
+└──────────────────────────────┘
+
+┌──────────────────────────────┐
+│ [撮影記録タブ]                │
+│ ‹  2026/04/20  ›             │  ← 日付ピッカー（前日・翌日ボタン付き）
+│ ┌────────────────────────┐   │
+│ │ 14:32 [Bio-Scope AM140]│   │  ← 記録カード
+│ │ 基本バイタル            │   │
+│ │ 心拍数 75  血圧 120 ...│   │  ← 全17項目を2カラムグリッド
+│ └────────────────────────┘   │
 └──────────────────────────────┘
 ```
 
@@ -92,29 +105,25 @@ Claude Vision API でバイタル情報抽出（2回目 or 1回目の API 呼び
 
 ```
 ┌──────────────────────────────┐
-│ 撮影               [✕]       │  ← モーダルヘッダー
+│ 撮影               [✕]       │
 ├──────────────────────────────┤
-│                              │
 │      カメラプレビュー         │  ← リアルタイム映像（リアカメラ優先）
 │  （解析中はスピナーオーバーレイ）│
-│                              │
 ├──────────────────────────────┤
-│             ◯                │  ← シャッターボタン（大きな円形）
+│             ◯                │  ← シャッターボタン
 └──────────────────────────────┘
 ```
 
 #### 状態遷移
 
 ```
-[起動] → 全項目「---」点線表示
+[起動] → 全項目「---」点線表示 / 撮影記録タブは今日の記録を読み込み
   ↓「撮影開始」タップ
 [モーダル表示] → カメラ起動・プレビュー
   ↓ シャッターボタンタップ
 [解析中] → カメラ画面上にスピナーオーバーレイ
   ↓ 解析完了
-[モーダル閉じる] → メイン画面の各項目に値が反映
-  ↓ 再撮影したい場合
-[「撮影開始」タップ] → モーダル再表示（繰り返し）
+[モーダル閉じる] → バイタル値が反映 ＋ DB 保存 ＋ 撮影記録タブに追加
 ```
 
 #### バイタル値の表示状態
@@ -127,9 +136,67 @@ Claude Vision API でバイタル情報抽出（2回目 or 1回目の API 呼び
 
 #### 実装上の制約
 - 画面遷移・ページ切り替えは行わない（SPA）
+- タブはヘッダー内に組み込み、常時 sticky で表示する
 - カメラは「撮影開始」タップ時に起動し、モーダルを閉じると停止する
 - モーダルの背景（backdrop）タップでも閉じる
 - バイタルグリッドは 2 カラムレイアウト（モバイル縦画面基準）
+
+## 識別ステップの高速化
+
+機種自動識別（ステップ1）は速度を優先し、以下の設定を使用する。
+
+| 設定 | 値 | 理由 |
+|---|---|---|
+| モデル | `claude-haiku-4-5-20251001`（固定） | 3択判定に Sonnet は不要 |
+| 画像サイズ | 768px（縮小） | 機種判別に高解像度は不要 |
+| max_tokens | 80 | JSON 1行のみ返す |
+
+抽出ステップ（ステップ2）は `.env` の `CLAUDE_MODEL`（デフォルト: `claude-sonnet-4-6`）を使用する。
+
+定数は `claude_service.py` の `_IDENTIFY_MODEL` / `_IDENTIFY_IMAGE_SIZE` で管理する。
+縮小処理は `image_service.py` の `downscale()` 関数で行う。
+
+## 撮影記録機能（Supabase DB）
+
+### 概要
+
+撮影・解析のたびに全17項目 + メタデータを Supabase（PostgreSQL）に自動保存し、撮影記録タブで日付別に閲覧できる。
+
+### DB テーブル構造
+
+```sql
+CREATE TABLE vital_records (
+    id                   UUID        DEFAULT gen_random_uuid() PRIMARY KEY,
+    recorded_at          TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+    monitor_type         TEXT,
+    -- 基本バイタル（17項目）
+    heart_rate           NUMERIC,
+    ...（全17項目）
+    notes                TEXT
+);
+CREATE INDEX idx_vital_records_recorded_at ON vital_records (recorded_at DESC);
+```
+
+### 接続方式
+
+- **Supabase Transaction pooler**（ポート 6543）を使用する
+- Vercel サーバーレス環境での接続過多を防ぐため、Direct connection（5432）は使用しない
+- `DATABASE_URL` が未設定の場合は DB 操作をスキップし、解析フローは継続する
+
+### タイムゾーン
+
+- 日付フィルタは **JST（Asia/Tokyo）基準** で処理する
+- SQL: `DATE(recorded_at AT TIME ZONE 'Asia/Tokyo') = %s`
+
+### 関連実装
+
+| ファイル | 関数 | 役割 |
+|---|---|---|
+| `db_service.py` | `save_record()` | 解析後に自動保存 |
+| `db_service.py` | `get_records(date, limit)` | 日付フィルタ付き取得 |
+| `vision.py` | `GET /api/records` | 記録一覧 API |
+| `schemas.py` | `VitalRecord` | 記録レスポンスモデル |
+| `app.js` | `loadHistory()` / `prependRecord()` | 記録の読み込み・追加 |
 
 ## モニター Skill システム
 
@@ -138,7 +205,6 @@ Claude Vision API でバイタル情報抽出（2回目 or 1回目の API 呼び
 ### 共通注意事項（_COMMON_CAUTIONS）
 
 すべての Skill に共通して付加される注意事項が `_COMMON_CAUTIONS` 定数に定義されている。
-混同しやすい以下の3項目について Claude への明示的な指示を与えている。
 
 | 項目 | 誤読パターン | 正しい挙動 |
 |---|---|---|
@@ -151,28 +217,29 @@ Claude Vision API でバイタル情報抽出（2回目 or 1回目の API 呼び
 「機種指定なし（generic）」または未選択の場合、以下の2ステップで処理する。
 
 ```
-ステップ1: 識別フェーズ（_IDENTIFY_PROMPT / max_tokens=80）
+ステップ1: 識別フェーズ（Haiku + 768px / max_tokens=80）
   └─ Claude が "fukuda_am140" / "drager_vista300" / "generic" のいずれかを返す
 
-ステップ2: 読み取りフェーズ（識別結果の Skill を適用した通常プロンプト）
+ステップ2: 読み取りフェーズ（識別結果の Skill を適用 / CLAUDE_MODEL 使用）
   └─ 通常の analyze_image と同じ処理
 ```
 
-機種を手動選択した場合はステップ1をスキップし、選択 Skill を直接適用する（API 呼び出し 1 回）。  
-自動識別した場合は合計 2 回の API 呼び出しになる。
+機種を手動選択した場合はステップ1をスキップし、選択 Skill を直接適用する（API 呼び出し 1 回）。
 
 #### レスポンスの `auto_detected` フラグ
 
-`AnalyzeResponse` の `auto_detected: bool` が `true` の場合、機種が自動識別されている。  
+`AnalyzeResponse` の `auto_detected: bool` が `true` の場合、機種が自動識別されている。
 フロントエンドはこのフラグを使い「自動検出: 機種名」バッジを表示する。
 
 #### 関連実装箇所
 
 | ファイル | 関数・クラス | 役割 |
 |---|---|---|
-| `claude_service.py` | `_identify_monitor_type()` | 識別用 API 呼び出し |
+| `claude_service.py` | `_IDENTIFY_MODEL` / `_IDENTIFY_IMAGE_SIZE` | 識別ステップ専用設定 |
+| `claude_service.py` | `_identify_monitor_type()` | 識別用 API 呼び出し（Haiku）|
 | `claude_service.py` | `AnalysisResult` (NamedTuple) | `(vital_data, resolved_monitor_type, auto_detected)` を返す |
 | `claude_service.py` | `analyze_image()` | 自動識別→Skill 適用→読み取りを統合 |
+| `image_service.py` | `downscale()` | 識別用に画像を縮小 |
 | `schemas.py` | `AnalyzeResponse.auto_detected` | 自動識別フラグ |
 | `app.js` | `renderDetectedMonitor()` | 自動検出バッジの表示制御 |
 
@@ -182,7 +249,7 @@ Claude Vision API でバイタル情報抽出（2回目 or 1回目の API 呼び
 |---|---|
 | `backend/services/monitor_skills.py` | Skill 定義・モニター選択肢の管理 |
 | `backend/services/claude_service.py` | `monitor_type` に応じたプロンプト構築・自動識別 |
-| `backend/api/vision.py` | `GET /api/monitors`・`POST /api/analyze` で `monitor_type` を受け取る |
+| `backend/api/vision.py` | `GET /api/monitors`・`POST /api/analyze`・`GET /api/records` |
 
 ### 登録済み Skill
 
@@ -216,7 +283,6 @@ Claude Vision API でバイタル情報抽出（2回目 or 1回目の API 呼び
 ### Skill 作成の参考資料
 
 `image/` ディレクトリに各機種の製品情報（PI）PDF を保管している。
-新しい Skill を追加する際はメーカーの仕様書・PI を参照すること。
 
 | ファイル | 機種 | 種別 |
 |---|---|---|
@@ -245,10 +311,16 @@ Claude Vision API でバイタル情報抽出（2回目 or 1回目の API 呼び
        ↓ multipart/form-data (POST /api/analyze)
 [FastAPI バックエンド]
   画像バリデーション・前処理 (image_service)
-       ↓ anthropic SDK
-[Claude Vision API (claude-sonnet-4-6)]
+  ├─ 識別用縮小画像生成 (downscale / 768px)
+  │      ↓ Haiku API
+  │   機種識別 (_identify_monitor_type)
+  └─ 抽出用フル画像 (1568px)
+         ↓ Sonnet API（CLAUDE_MODEL）
+      バイタル情報抽出 (analyze_image)
        ↓ JSON レスポンス（構造化バイタルデータ）
-[FastAPI] → JSON → [UI: バイタル情報パネル表示]
+[FastAPI]
+  ├─ Supabase DB 保存 (db_service.save_record)
+  └─ JSON → [UI: バイタル情報パネル表示 + 撮影記録タブ追加]
 ```
 
 ## ディレクトリ構造
@@ -273,20 +345,21 @@ monitor_app/
 │
 ├── backend/                      # FastAPI バックエンド
 │   ├── main.py                   # アプリエントリポイント・ルーター統合
-│   ├── config.py                 # 設定・環境変数読み込み
+│   ├── config.py                 # 設定・環境変数読み込み（DATABASE_URL 含む）
 │   ├── pyproject.toml            # uv プロジェクト定義・依存パッケージ
 │   ├── uv.lock                   # 依存ロックファイル
 │   ├── api/
 │   │   ├── __init__.py
-│   │   └── vision.py             # GET /api/monitors・POST /api/analyze
+│   │   └── vision.py             # GET /api/monitors・POST /api/analyze・GET /api/records
 │   ├── services/
 │   │   ├── __init__.py
-│   │   ├── claude_service.py     # Claude API 呼び出し・Skill 適用・自動識別
+│   │   ├── claude_service.py     # Claude API 呼び出し・Skill 適用・自動識別（Haiku）
 │   │   ├── monitor_skills.py     # 機種別 Skill 定義（MONITOR_SKILLS / MONITOR_OPTIONS）
-│   │   └── image_service.py      # 画像前処理・Base64変換・バリデーション
+│   │   ├── image_service.py      # 画像前処理・リサイズ・downscale・Base64 変換
+│   │   └── db_service.py         # Supabase DB 保存・取得（save_record / get_records）
 │   ├── models/
 │   │   ├── __init__.py
-│   │   └── schemas.py            # Pydantic モデル（VitalData / AnalyzeResponse）
+│   │   └── schemas.py            # Pydantic モデル（VitalData / VitalRecord / AnalyzeResponse）
 │   └── uploads/                  # アップロード画像の一時保存（起動時クリア推奨）
 │
 └── frontend/                     # 静的 HTML/CSS/JS（FastAPI から配信）
@@ -294,7 +367,7 @@ monitor_app/
     ├── css/
     │   └── style.css
     └── js/
-        ├── app.js                # メインロジック・状態管理・自動検出バッジ
+        ├── app.js                # メインロジック・タブ制御・記録表示
         ├── camera.js             # カメラキャプチャ処理（getUserMedia API）
         └── api.js                # バックエンド API 通信
 ```
@@ -307,9 +380,10 @@ monitor_app/
 | `api/index.py` | Vercel サーバーレス関数エントリポイント |
 | `backend/` | FastAPI サーバー一式 |
 | `backend/api/` | HTTP エンドポイント定義 |
-| `backend/services/claude_service.py` | Claude API 呼び出し・Skill 適用・自動識別ロジック |
+| `backend/services/claude_service.py` | Claude API 呼び出し・Skill 適用・自動識別ロジック（識別はHaiku固定） |
 | `backend/services/monitor_skills.py` | 機種別 Skill 定義（`MONITOR_SKILLS`・`MONITOR_OPTIONS`） |
-| `backend/services/image_service.py` | 画像前処理・リサイズ・Base64 変換・バリデーション |
+| `backend/services/image_service.py` | 画像前処理・リサイズ・`downscale()`・Base64 変換・バリデーション |
+| `backend/services/db_service.py` | Supabase への保存・取得。`DATABASE_URL` 未設定時はスキップ |
 | `backend/models/` | リクエスト/レスポンスの Pydantic データモデル |
 | `backend/uploads/` | アップロード画像の一時保存（起動時クリア推奨） |
 | `frontend/` | 静的 HTML/CSS/JS。FastAPI から `/` で配信される |
@@ -328,7 +402,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 cd backend
 uv sync                  # .venv 作成 + 依存パッケージ一括インストール
 cp ../.env.example ../.env
-# .env に ANTHROPIC_API_KEY を設定
+# .env に ANTHROPIC_API_KEY と DATABASE_URL を設定
 ```
 
 ### 開発サーバー起動
@@ -357,9 +431,6 @@ uv sync                  # lockfile と環境を同期
 
 ### スマホ・外部端末からのアクセス（Cloudflare Tunnel）
 
-カメラを使うには HTTPS が必須のため、Cloudflare Tunnel でトンネルを作成する。
-アカウント不要・無料で利用可能。
-
 ```bash
 # サーバーと Cloudflare Tunnel を同時に起動（プロジェクトルートから）
 ./start.sh
@@ -370,9 +441,6 @@ cd backend && uv run uvicorn main:app --port 8000
 # ターミナル2
 cloudflared tunnel --url http://localhost:8000 --no-autoupdate
 ```
-
-- 起動後に表示される `https://xxxx.trycloudflare.com` をスマホで開く
-- 起動のたびに URL が変わる（アカウント登録で固定 URL も可能）
 
 ### Vercel へのデプロイ（GitHub 経由）
 
@@ -387,6 +455,7 @@ cloudflared tunnel --url http://localhost:8000 --no-autoupdate
 | `ANTHROPIC_API_KEY` | Anthropic のAPIキー |
 | `CLAUDE_MODEL` | `claude-sonnet-4-6` |
 | `VERCEL` | `1` |
+| `DATABASE_URL` | Supabase Transaction pooler URI（ポート 6543） |
 
 4. Deploy ボタンを押すと自動ビルド・公開される
 
@@ -397,24 +466,13 @@ git add . && git commit -m "update" && git push
 # → GitHub push をトリガーに Vercel が自動デプロイ
 ```
 
-#### Vercel 構成ファイル
-
-| ファイル | 役割 |
-|---|---|
-| `vercel.json` | ルーティング設定（API / 静的ファイル） |
-| `requirements.txt` | Vercel が参照する Python 依存パッケージ |
-| `api/index.py` | Vercel サーバーレス関数のエントリポイント |
-
-- API リクエスト (`/api/*`, `/health`) → `api/index.py`（サーバーレス関数）
-- 静的ファイル (`/css/*`, `/js/*`) → `frontend/` ディレクトリ
-- その他 → `frontend/index.html`
-
 ## API エンドポイント
 
 | メソッド | パス | 説明 |
 |---|---|---|
 | `GET` | `/api/monitors` | 利用可能なモニター種別の一覧を返す |
-| `POST` | `/api/analyze` | カメラ撮影画像を受け取り Claude Vision で解析し結果を返す |
+| `POST` | `/api/analyze` | カメラ撮影画像を解析し結果を返す（DB に自動保存） |
+| `GET` | `/api/records` | 撮影記録を返す（`date`・`limit` クエリパラメータ対応） |
 | `GET` | `/health` | ヘルスチェック |
 
 ### POST /api/analyze レスポンス
@@ -422,16 +480,24 @@ git add . && git commit -m "update" && git push
 ```json
 {
   "success": true,
-  "data": { /* VitalData: 17 項目 + notes */ },
-  "monitor_type": "fukuda_am140",   // 実際に使用した Skill の ID（null = Skill なし）
-  "auto_detected": true             // true: 機種が自動識別された / false: 手動選択
+  "data": { /* VitalData: 17項目 + notes */ },
+  "monitor_type": "fukuda_am140",
+  "auto_detected": true,
+  "record_saved_at": "2026-04-20T14:32:00+09:00"
 }
 ```
+
+### GET /api/records クエリパラメータ
+
+| パラメータ | 型 | デフォルト | 説明 |
+|---|---|---|---|
+| `date` | `YYYY-MM-DD` | なし（全件） | JST基準の日付フィルタ |
+| `limit` | int | 200 | 最大取得件数（上限 500） |
 
 ## 重要な注意事項
 
 ### セキュリティ
-- `ANTHROPIC_API_KEY` は必ず `.env` に設定すること（コミット禁止）
+- `ANTHROPIC_API_KEY` / `DATABASE_URL` は必ず `.env` に設定すること（コミット禁止）
 
 ### カメラ・デバイス
 - カメラ使用は **HTTPS または `localhost`** 環境が必須（ブラウザのセキュリティ制約）
@@ -440,14 +506,15 @@ git add . && git commit -m "update" && git push
 
 ### 画像処理
 - アップロード画像は `backend/uploads/` に一時保存される（本番では定期削除を推奨）
-- Claude Vision の画像サイズ上限: 5MB / 推奨: 1568px 以下にリサイズして送信
+- 抽出ステップ: 1568px 以下にリサイズして送信
+- 識別ステップ: さらに 768px に縮小（`downscale()` 関数）
 
 ### モデル・API
-- デフォルトモデルは `claude-sonnet-4-6`（変更は `.env` の `CLAUDE_MODEL` で設定）
-- Claude への指示はバイタル項目の **JSON 構造化出力** を要求するプロンプトとする
-- レスポンス JSON には全 17 項目を必ず含め、読み取れない項目は `null` とする
+- **識別ステップ**: `claude-haiku-4-5-20251001` 固定（`_IDENTIFY_MODEL`）
+- **抽出ステップ**: `.env` の `CLAUDE_MODEL`（デフォルト: `claude-sonnet-4-6`）
+- レスポンス JSON には全17項目を必ず含め、読み取れない項目は `null` とする
 
-#### モデル選択の目安
+#### モデル選択の目安（抽出ステップ）
 
 | モデル | 特徴 | 用途 |
 |---|---|---|
@@ -455,7 +522,10 @@ git add . && git commit -m "update" && git push
 | `claude-sonnet-4-6` | バランス型（デフォルト） | 通常運用 |
 | `claude-haiku-4-5-20251001` | 高速・低コスト | コスト削減・レスポンス速度優先 |
 
-機種自動識別（ステップ1）と読み取り（ステップ2）は両方とも `CLAUDE_MODEL` で指定したモデルを使用する。
+### DB
+- `DATABASE_URL` が未設定の場合は DB 操作をスキップし、解析は正常に動作する
+- Supabase Transaction pooler（ポート 6543）を使用すること。Direct connection（5432）は Vercel サーバーレスでは接続過多になる
+- 日付フィルタは JST（Asia/Tokyo）基準
 
 ### 実装禁止事項
 - ファイルアップロード入力（`<input type="file">`）は UI に設けない

@@ -236,47 +236,30 @@ function buildHistoryCard(record) {
     });
 
     const label = getMonitorLabel(record.monitor_type);
-    const badgeHtml = label
-        ? `<span class="history-badge">${label}</span>`
-        : '';
+    const badgeHtml = label ? `<span class="history-badge">${label}</span>` : '';
+
+    const gridHtml = VITAL_GROUPS.map(({ title, items }) => {
+        const itemsHtml = items.map(({ key, label, unit }) => {
+            const val = record[key];
+            const hasValue = val !== null && val !== undefined;
+            const display = hasValue
+                ? `${formatValue(val)}<span class="hav-unit">${unit}</span>`
+                : '---';
+            return `<div class="hav-item">
+                <span class="hav-label">${label}</span>
+                <span class="hav-value${hasValue ? '' : ' is-null'}">${display}</span>
+            </div>`;
+        }).join('');
+        return `<div class="hav-group-title">${title}</div>${itemsHtml}`;
+    }).join('');
 
     card.innerHTML = `
         <div class="history-meta">
             <span class="history-time">${timeStr}</span>
             ${badgeHtml}
         </div>
-        <div class="history-vitals">
-            ${buildVitalChips(record)}
-        </div>`;
+        <div class="history-all-vitals">${gridHtml}</div>`;
     return card;
-}
-
-function buildVitalChips(r) {
-    const fv = v => (v !== null && v !== undefined) ? formatValue(v) : null;
-
-    // 血圧：SYS/DIA(MEAN) 形式
-    let bpVal = null;
-    if (r.bp_systolic !== null || r.bp_diastolic !== null) {
-        const s = fv(r.bp_systolic) ?? '?';
-        const d = fv(r.bp_diastolic) ?? '?';
-        bpVal = `${s}/${d}`;
-        if (r.bp_mean !== null) bpVal += `(${fv(r.bp_mean)})`;
-    }
-
-    const chips = [
-        { label: 'HR',    val: fv(r.heart_rate),       unit: ''    },
-        { label: 'BP',    val: bpVal,                   unit: ''    },
-        { label: 'SpO2',  val: fv(r.spo2),              unit: '%'   },
-        { label: 'EtCO2', val: fv(r.etco2),             unit: ''    },
-        { label: 'RR',    val: fv(r.respiratory_rate),  unit: ''    },
-        { label: 'T',     val: fv(r.body_temperature),  unit: '°C'  },
-    ];
-
-    return chips.map(({ label, val, unit }) => {
-        const display = val !== null ? `${val}${unit}` : '---';
-        const cls = val !== null ? '' : ' is-null';
-        return `<span class="hv"><span class="hv-label">${label}</span><span class="hv-val${cls}">${display}</span></span>`;
-    }).join('');
 }
 
 function getMonitorLabel(id) {

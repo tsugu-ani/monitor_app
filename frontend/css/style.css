@@ -512,37 +512,62 @@ main {
     max-width: 160px;
 }
 
-.history-vitals {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
+.history-all-vitals {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+    border-top: 1px solid var(--border);
+    margin: 8px -14px -10px;
 }
 
-.hv {
+.hav-group-title {
+    grid-column: 1 / -1;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    padding: 5px 10px 3px;
+    background: var(--bg);
+}
+
+.hav-item {
+    background: var(--card-bg);
+    padding: 6px 10px;
     display: flex;
     flex-direction: column;
-    gap: 1px;
+    gap: 2px;
 }
 
-.hv-label {
-    font-size: 9px;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
+.hav-label {
+    font-size: 10px;
     color: var(--text-muted);
-    font-weight: 600;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.hv-val {
-    font-size: 13px;
+.hav-value {
+    font-size: 17px;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
-    color: var(--text);
+    color: var(--filled-value);
     line-height: 1.2;
 }
 
-.hv-val.is-null {
-    color: var(--null-value);
+.hav-value.is-null {
+    font-size: 15px;
     font-weight: 400;
+    color: var(--null-value);
+}
+
+.hav-unit {
+    font-size: 10px;
+    font-weight: 400;
+    color: var(--text-muted);
+    margin-left: 2px;
 }
 
 /* ===== ユーティリティ ===== */

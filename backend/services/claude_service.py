@@ -6,9 +6,14 @@ from anthropic import Anthropic
 
 from config import settings
 from models.schemas import VitalData
+from services.image_service import downscale
 from services.monitor_skills import MONITOR_SKILLS
 
 _client = Anthropic(api_key=settings.anthropic_api_key)
+
+# 識別ステップ専用の設定（速度優先）
+_IDENTIFY_MODEL = "claude-haiku-4-5-20251001"  # 3択判定に十分な軽量モデル
+_IDENTIFY_IMAGE_SIZE = 768                      # 機種判別に必要な最小解像度
 
 _BASE_PROMPT = """この画像は生体情報モニター（バイタルモニター・麻酔器等）の画面を撮影したものです。{monitor_hint}
 画像から以下の17項目の数値を読み取り、JSONのみで返してください。
@@ -92,11 +97,14 @@ def _make_image_message(base64_data: str, media_type: str, text: str) -> list:
 
 
 def _identify_monitor_type(base64_data: str, media_type: str) -> str:
-    """画像からモニター種別を自動識別して ID を返す。識別できない場合は "" を返す。"""
+    """画像からモニター種別を自動識別して ID を返す。識別できない場合は "" を返す。
+    識別は Haiku + 縮小画像で高速処理する（精度より速度を優先）。
+    """
+    small_data, small_type = downscale(base64_data, media_type, _IDENTIFY_IMAGE_SIZE)
     message = _client.messages.create(
-        model=settings.claude_model,
+        model=_IDENTIFY_MODEL,
         max_tokens=80,
-        messages=_make_image_message(base64_data, media_type, _IDENTIFY_PROMPT),
+        messages=_make_image_message(small_data, small_type, _IDENTIFY_PROMPT),
     )
     raw = message.content[0].text.strip()
     m = re.search(r'"monitor_type"\s*:\s*"([^"]+)"', raw)

@@ -52,6 +52,7 @@ const camera = new Camera(video, canvas);
 // ===== 初期化 =====
 buildVitalGrid();
 initMonitorSelect();
+loadHistory();
 
 // ===== モニター種別セレクタ初期化 =====
 const monitorSelect = document.getElementById('monitor-select');
@@ -148,6 +149,13 @@ shutterBtn.addEventListener('click', async () => {
         renderResults(result.data);
         captureTime.textContent = `最終撮影: ${new Date().toLocaleTimeString('ja-JP')}`;
         renderDetectedMonitor(result.auto_detected, result.monitor_type);
+        if (result.record_saved_at) {
+            prependRecord({
+                ...result.data,
+                recorded_at: result.record_saved_at,
+                monitor_type: result.monitor_type || null,
+            });
+        }
     } catch (err) {
         closeModal();
         showError(err.message || '解析中にエラーが発生しました');
@@ -199,6 +207,84 @@ function renderDetectedMonitor(autoDetected, monitorTypeId) {
     const label = option ? option.label : monitorTypeId;
     detectedMonitor.textContent = `自動検出: ${label}`;
     detectedMonitor.classList.remove('hidden');
+}
+
+// ===== 撮影記録 =====
+const historyList = document.getElementById('history-list');
+
+async function loadHistory() {
+    const records = await fetchRecords(50);
+    if (!records.length) return;
+    historyList.innerHTML = '';
+    records.forEach(r => historyList.appendChild(buildHistoryCard(r)));
+}
+
+function prependRecord(record) {
+    const empty = historyList.querySelector('.history-empty');
+    if (empty) empty.remove();
+    historyList.insertBefore(buildHistoryCard(record), historyList.firstChild);
+}
+
+function buildHistoryCard(record) {
+    const card = document.createElement('div');
+    card.className = 'history-card';
+
+    const dt = new Date(record.recorded_at);
+    const timeStr = dt.toLocaleString('ja-JP', {
+        month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit',
+    });
+
+    const label = getMonitorLabel(record.monitor_type);
+    const badgeHtml = label
+        ? `<span class="history-badge">${label}</span>`
+        : '';
+
+    card.innerHTML = `
+        <div class="history-meta">
+            <span class="history-time">${timeStr}</span>
+            ${badgeHtml}
+        </div>
+        <div class="history-vitals">
+            ${buildVitalChips(record)}
+        </div>`;
+    return card;
+}
+
+function buildVitalChips(r) {
+    const fv = v => (v !== null && v !== undefined) ? formatValue(v) : null;
+
+    // 血圧：SYS/DIA(MEAN) 形式
+    let bpVal = null;
+    if (r.bp_systolic !== null || r.bp_diastolic !== null) {
+        const s = fv(r.bp_systolic) ?? '?';
+        const d = fv(r.bp_diastolic) ?? '?';
+        bpVal = `${s}/${d}`;
+        if (r.bp_mean !== null) bpVal += `(${fv(r.bp_mean)})`;
+    }
+
+    const chips = [
+        { label: 'HR',    val: fv(r.heart_rate),       unit: ''    },
+        { label: 'BP',    val: bpVal,                   unit: ''    },
+        { label: 'SpO2',  val: fv(r.spo2),              unit: '%'   },
+        { label: 'EtCO2', val: fv(r.etco2),             unit: ''    },
+        { label: 'RR',    val: fv(r.respiratory_rate),  unit: ''    },
+        { label: 'T',     val: fv(r.body_temperature),  unit: '°C'  },
+    ];
+
+    return chips.map(({ label, val, unit }) => {
+        const display = val !== null ? `${val}${unit}` : '---';
+        const cls = val !== null ? '' : ' is-null';
+        return `<span class="hv"><span class="hv-label">${label}</span><span class="hv-val${cls}">${display}</span></span>`;
+    }).join('');
+}
+
+function getMonitorLabel(id) {
+    if (!id) return null;
+    const opt = monitorOptions.find(o => o.id === id);
+    if (opt) return opt.label;
+    const fallback = { fukuda_am140: 'Bio-Scope AM140', drager_vista300: 'Vista 300 + Atlan A100' };
+    return fallback[id] ?? id;
 }
 
 // ===== エラー表示 =====

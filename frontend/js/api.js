@@ -7,6 +7,12 @@ async function fetchMonitorOptions() {
     return json.monitors || [];
 }
 
+async function fetchRecords(limit = 50) {
+    const res = await fetch(`/api/records?limit=${limit}`);
+    if (!res.ok) return [];
+    return res.json();
+}
+
 async function analyzeImage(blob, monitorType = '') {
     const formData = new FormData();
     formData.append('file', blob, 'capture.jpg');

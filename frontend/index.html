@@ -68,11 +68,21 @@
 
     <!-- ===== 撮影記録タブ ===== -->
     <div id="tab-history" class="tab-panel hidden">
+
+        <!-- 日付選択バー -->
+        <div class="date-picker-bar">
+            <button id="date-prev" class="date-nav-btn" aria-label="前の日">&#8249;</button>
+            <input type="date" id="history-date" class="history-date-input">
+            <button id="date-next" class="date-nav-btn" aria-label="次の日">&#8250;</button>
+        </div>
+
+        <!-- 記録一覧 -->
         <div class="history-section">
             <div id="history-list" class="history-list">
                 <p class="history-empty">記録がありません</p>
             </div>
         </div>
+
     </div>
 </main>
 

@@ -63,21 +63,36 @@ def save_record(monitor_type: Optional[str], vital_data: VitalData) -> Optional[
         return None
 
 
-def get_records(limit: int = 50) -> list[dict]:
-    """最新のバイタル記録を返す。
+def get_records(limit: int = 200, date: Optional[str] = None) -> list[dict]:
+    """バイタル記録を返す（新しい順）。
+
+    Args:
+        limit: 最大取得件数
+        date:  絞り込む日付（YYYY-MM-DD、JST基準）。None の場合は全件。
 
     Returns:
-        レコードのリスト（新しい順）。DATABASE_URL 未設定・エラー時は空リスト。
+        レコードのリスト。DATABASE_URL 未設定・エラー時は空リスト。
     """
     if not settings.database_url:
         return []
 
-    sql = "SELECT * FROM vital_records ORDER BY recorded_at DESC LIMIT %s"
+    if date:
+        # recorded_at は TIMESTAMPTZ のため JST (Asia/Tokyo) に変換してから日付比較
+        sql = """
+            SELECT * FROM vital_records
+            WHERE DATE(recorded_at AT TIME ZONE 'Asia/Tokyo') = %s
+            ORDER BY recorded_at DESC
+            LIMIT %s
+        """
+        params = (date, limit)
+    else:
+        sql = "SELECT * FROM vital_records ORDER BY recorded_at DESC LIMIT %s"
+        params = (limit,)
 
     try:
         with _get_conn() as conn:
             with conn.cursor() as cur:
-                cur.execute(sql, (limit,))
+                cur.execute(sql, params)
                 rows = cur.fetchall()
         result = []
         for row in rows:

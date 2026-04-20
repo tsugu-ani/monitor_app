@@ -230,17 +230,49 @@ function renderDetectedMonitor(autoDetected, monitorTypeId) {
 }
 
 // ===== 撮影記録 =====
-const historyList = document.getElementById('history-list');
+const historyList   = document.getElementById('history-list');
+const historyDateEl = document.getElementById('history-date');
+const datePrevBtn   = document.getElementById('date-prev');
+const dateNextBtn   = document.getElementById('date-next');
+
+// 今日の日付を YYYY-MM-DD 形式で返す（ローカル時刻）
+function todayStr() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+// 日付ピッカーを今日で初期化
+historyDateEl.value = todayStr();
+
+// 前日・翌日ボタン
+datePrevBtn.addEventListener('click', () => shiftDate(-1));
+dateNextBtn.addEventListener('click', () => shiftDate(+1));
+
+function shiftDate(delta) {
+    const d = new Date(historyDateEl.value);
+    d.setDate(d.getDate() + delta);
+    historyDateEl.value = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    loadHistory();
+}
+
+// 日付変更時に再読み込み
+historyDateEl.addEventListener('change', loadHistory);
 
 async function loadHistory() {
-    const records = await fetchRecords(50);
-    if (!records.length) return;
+    historyList.innerHTML = '<p class="history-loading">読み込み中...</p>';
+    const records = await fetchRecords(historyDateEl.value);
+    if (!records.length) {
+        historyList.innerHTML = '<p class="history-empty">この日の記録はありません</p>';
+        return;
+    }
     historyList.innerHTML = '';
     records.forEach(r => historyList.appendChild(buildHistoryCard(r)));
 }
 
 function prependRecord(record) {
-    const empty = historyList.querySelector('.history-empty');
+    // 撮影記録タブが今日を表示中の場合のみ先頭に追加
+    if (historyDateEl.value !== todayStr()) return;
+    const empty = historyList.querySelector('.history-empty, .history-loading');
     if (empty) empty.remove();
     historyList.insertBefore(buildHistoryCard(record), historyList.firstChild);
 }

@@ -7,8 +7,10 @@ async function fetchMonitorOptions() {
     return json.monitors || [];
 }
 
-async function fetchRecords(limit = 50) {
-    const res = await fetch(`/api/records?limit=${limit}`);
+async function fetchRecords(date = '', limit = 200) {
+    const params = new URLSearchParams({ limit });
+    if (date) params.set('date', date);
+    const res = await fetch(`/api/records?${params}`);
     if (!res.ok) return [];
     return res.json();
 }

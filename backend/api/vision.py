@@ -16,9 +16,9 @@ def list_monitors():
 
 
 @router.get("/records", response_model=list[VitalRecord])
-def list_records(limit: int = 50):
-    """撮影記録を新しい順で返す。"""
-    return get_records(limit=min(limit, 200))
+def list_records(limit: int = 200, date: str = ""):
+    """撮影記録を新しい順で返す。date は YYYY-MM-DD 形式（JST）。"""
+    return get_records(limit=min(limit, 500), date=date or None)
 
 
 @router.post("/analyze", response_model=AnalyzeResponse)

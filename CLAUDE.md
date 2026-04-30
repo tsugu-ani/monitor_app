@@ -70,13 +70,13 @@ Claude Vision API でバイタル情報抽出（API 最終回）
 
 #### 画面構成
 
-画面は **シングルページ（SPA）**。ヘッダーにタブバーを組み込み、「撮影」「撮影記録」の2タブで切り替える。
+画面は **シングルページ（SPA）**。ヘッダーにタブバーを組み込み、「撮影」「撮影記録」「トレンド」の3タブで切り替える。
 
 ```
 ┌──────────────────────────────┐
 │ ≈ モニター情報読取  12:34    │  ← ヘッダー（sticky）
-├──────────────┬───────────────┤
-│     撮影     │   撮影記録    │  ← タブバー（sticky、ヘッダー内）
+├───────────┬──────────┬───────┤
+│   撮影    │ 撮影記録  │トレンド│  ← タブバー（sticky、ヘッダー内）
 ├──────────────────────────────┤
 │ [撮影タブ]                    │
 │ モニター種別 [機種指定なし▼]  │
@@ -94,10 +94,24 @@ Claude Vision API でバイタル情報抽出（API 最終回）
 │ [撮影記録タブ]                │
 │ ‹  2026/04/20  ›             │  ← 日付ピッカー（前日・翌日ボタン付き）
 │ ┌────────────────────────┐   │
-│ │ 14:32 [Bio-Scope AM140]│   │  ← 記録カード
+│ │ 14:32 [Bio-Scope AM140] ✏ │  ← 記録カード（右端に編集ボタン）
 │ │ 基本バイタル            │   │
 │ │ 心拍数 75  血圧 120 ...│   │  ← 全17項目を2カラムグリッド
 │ └────────────────────────┘   │
+└──────────────────────────────┘
+
+┌──────────────────────────────┐
+│ [トレンドタブ]                │
+│ 表示項目 [心拍数（bpm）▼]    │  ← 項目セレクタ（グループ別）
+│ 開始 [2026/04/30 09:15]      │  ← datetime-local ピッカー
+│ 終了 [2026/04/30 14:32]      │
+│ [更新]                        │
+│ ╔══════════════════════╗      │
+│ ║   折れ線グラフ        ║      │  ← Chart.js（複数日は MM/DD HH:MM）
+│ ╚══════════════════════╝      │
+│ 記録一覧                      │
+│ 04/30 14:32    78  bpm       │  ← 新しい順（DESC）
+│ 04/30 12:15    75  bpm       │
 └──────────────────────────────┘
 ```
 
@@ -133,6 +147,25 @@ Claude Vision API でバイタル情報抽出（API 最終回）
 | 未撮影 | `---` | 点線下線・グレー（`--ph-value`） |
 | 取得済み | 数値 | 黒・通常フォント（`--filled-value`） |
 | 読取不可（null） | `---` | 点線下線・薄グレー（`--null-value`） |
+
+#### 修正モーダル（撮影記録タブの ✏ ボタンタップ時）
+
+```
+┌──────────────────────────────┐
+│ 記録を修正          [✕]      │
+├──────────────────────────────┤
+│ 基本バイタル                  │
+│ ┌──────────┬──────────┐      │
+│ │心拍数     │血圧（収縮）│     │
+│ │[75___]bpm │[120__]mmHg│     │
+│ └──────────┴──────────┘      │
+│  ...（全17項目）              │
+│ 補足情報                      │
+│ [textarea]                   │
+├──────────────────────────────┤
+│ [キャンセル]      [保存]      │
+└──────────────────────────────┘
+```
 
 #### 実装上の制約
 - 画面遷移・ページ切り替えは行わない（SPA）
@@ -193,10 +226,102 @@ CREATE INDEX idx_vital_records_recorded_at ON vital_records (recorded_at DESC);
 | ファイル | 関数 | 役割 |
 |---|---|---|
 | `db_service.py` | `save_record()` | 解析後に自動保存 |
-| `db_service.py` | `get_records(date, limit)` | 日付フィルタ付き取得 |
-| `vision.py` | `GET /api/records` | 記録一覧 API |
+| `db_service.py` | `update_record(id, vital_data)` | バイタル値の手動修正（UPDATE） |
+| `db_service.py` | `get_records(date, limit, start, end)` | 日付・datetime 範囲フィルタ付き取得 |
+| `vision.py` | `GET /api/records` | 記録一覧 API（`date`・`start`/`end`・`limit` 対応） |
+| `vision.py` | `PATCH /api/records/{id}` | 記録の手動修正 API |
 | `schemas.py` | `VitalRecord` | 記録レスポンスモデル |
+| `schemas.py` | `AnalyzeResponse.record_id` | 保存 UUID（撮影直後の編集に使用） |
 | `app.js` | `loadHistory()` / `prependRecord()` | 記録の読み込み・追加 |
+| `app.js` | `openEditModal()` / `buildEditForm()` | 修正モーダルの制御・フォーム生成 |
+| `trend.js` | `loadTrend()` / `renderTrendChart()` | トレンドタブのデータ取得・グラフ描画 |
+
+## 撮影記録の手動修正機能
+
+### 概要
+
+AI の読み取り誤りを人手で修正し Supabase DB に上書き保存できる機能。撮影記録タブの各記録カード右上に表示される **鉛筆アイコンボタン（✏）** をタップすると修正モーダルが開く。
+
+### 動作フロー
+
+```
+撮影記録タブ → 記録カード右上の ✏ ボタンをタップ
+       ↓
+修正モーダルが開く（現在値がフォームに入力済み）
+       ↓ 値を修正・保存ボタンをタップ
+PATCH /api/records/{id} → DB UPDATE
+       ↓
+モーダルが閉じ、カードが即時再描画
+```
+
+### 実装上のポイント
+
+- `recordsMap`（`Map<id, record>`）でページ内のレコードをキャッシュし、イベント委任で編集ボタンのクリックを処理する
+- 撮影直後に追加されたカードも `AnalyzeResponse.record_id` を使って編集可能にする
+- 数値フィールドを空欄にすると `null`（---）として保存する
+- `notes`（補足情報）はテキストエリアで編集可能
+
+### API
+
+| メソッド | パス | ボディ | 説明 |
+|---|---|---|---|
+| `PATCH` | `/api/records/{id}` | `VitalData` JSON | 全17項目 + notes を上書き |
+
+`update_record()` は `VitalData` の全フィールドを `UPDATE` する。フィールドを `null` にしたい場合は空欄（フロントエンドが `null` を送信）。
+
+## トレンドタブ
+
+### 概要
+
+撮影記録から1項目を選択し、指定した日時範囲の時系列変化を **折れ線グラフ** と **一覧** で表示する。
+
+### 動作フロー
+
+```
+トレンドタブを初めて開く
+       ↓
+今日の記録を取得 → 最初の計測時刻〜現在をデフォルト期間に設定
+       ↓
+項目セレクタで表示項目を選択（変更時に自動更新）
+       ↓
+GET /api/records?start=ISO&end=ISO → ASC 順でレコード取得
+       ↓
+選択項目の値があるレコードだけ抽出
+       ↓
+Chart.js 折れ線グラフ + 新しい順の一覧を表示
+```
+
+### 日時範囲の仕様
+
+| 設定 | 仕様 |
+|---|---|
+| デフォルト開始 | 今日の最初の計測時刻（記録なし時は今日の 0:00） |
+| デフォルト終了 | 現在時刻 |
+| 入力形式 | `datetime-local`（ブラウザのローカル時刻） |
+| API 送信形式 | ISO 8601 UTC（`new Date(value).toISOString()`） |
+| DB 比較 | `recorded_at >= start AND recorded_at <= end`（TIMESTAMPTZ 比較） |
+| ソート順 | ASC（グラフ用）。一覧は JS 側で逆順（DESC）表示 |
+
+### グラフ仕様
+
+| 設定 | 値 |
+|---|---|
+| ライブラリ | Chart.js 4.4.7（CDN） |
+| グラフ種別 | 折れ線（`type: 'line'`）、fill あり |
+| X 軸ラベル | 単日: `HH:MM`、複数日: `MM/DD HH:MM` |
+| Y 軸 | `beginAtZero: false`（値域に合わせて自動スケール） |
+| 項目変更 | グラフインスタンスを再利用し `chart.update()` で更新 |
+
+### 関連実装
+
+| ファイル | 関数 | 役割 |
+|---|---|---|
+| `trend.js` | `initTrendDefaults()` | デフォルト期間設定（今日の最初の計測時刻を取得） |
+| `trend.js` | `loadTrend()` | データ取得・フィルタ・グラフ・一覧の描画 |
+| `trend.js` | `renderTrendChart()` | Chart.js グラフ描画・更新 |
+| `trend.js` | `renderTrendList()` | 時系列一覧（DESC）描画 |
+| `db_service.py` | `get_records(start=, end=)` | datetime 範囲フィルタ・ASC 順返却 |
+| `vision.py` | `GET /api/records?start=&end=` | トレンド用 datetime 範囲クエリ |
 
 ## モニター Skill システム
 
@@ -367,9 +492,10 @@ monitor_app/
     ├── css/
     │   └── style.css
     └── js/
-        ├── app.js                # メインロジック・タブ制御・記録表示
+        ├── app.js                # メインロジック・タブ制御・記録表示・編集モーダル
         ├── camera.js             # カメラキャプチャ処理（getUserMedia API）
-        └── api.js                # バックエンド API 通信
+        ├── api.js                # バックエンド API 通信
+        └── trend.js              # トレンドタブ（グラフ・一覧・期間選択）
 ```
 
 ## ディレクトリの役割
@@ -387,6 +513,7 @@ monitor_app/
 | `backend/models/` | リクエスト/レスポンスの Pydantic データモデル |
 | `backend/uploads/` | アップロード画像の一時保存（起動時クリア推奨） |
 | `frontend/` | 静的 HTML/CSS/JS。FastAPI から `/` で配信される |
+| `frontend/js/trend.js` | トレンドタブのロジック（Chart.js グラフ・期間選択・一覧） |
 
 ## 開発コマンド
 
@@ -472,7 +599,8 @@ git add . && git commit -m "update" && git push
 |---|---|---|
 | `GET` | `/api/monitors` | 利用可能なモニター種別の一覧を返す |
 | `POST` | `/api/analyze` | カメラ撮影画像を解析し結果を返す（DB に自動保存） |
-| `GET` | `/api/records` | 撮影記録を返す（`date`・`limit` クエリパラメータ対応） |
+| `GET` | `/api/records` | 撮影記録を返す（`date`・`start`/`end`・`limit` 対応） |
+| `PATCH` | `/api/records/{id}` | 指定 ID のバイタル値を手動修正する |
 | `GET` | `/health` | ヘルスチェック |
 
 ### POST /api/analyze レスポンス
@@ -483,16 +611,29 @@ git add . && git commit -m "update" && git push
   "data": { /* VitalData: 17項目 + notes */ },
   "monitor_type": "fukuda_am140",
   "auto_detected": true,
-  "record_saved_at": "2026-04-20T14:32:00+09:00"
+  "record_saved_at": "2026-04-20T14:32:00+09:00",
+  "record_id": "uuid-of-saved-record"
 }
+```
+
+### PATCH /api/records/{id} リクエスト / レスポンス
+
+リクエストボディは `VitalData` JSON（全17項目 + notes）。`null` を送ると対応カラムを NULL に更新する。
+
+```json
+{ "success": true }
 ```
 
 ### GET /api/records クエリパラメータ
 
 | パラメータ | 型 | デフォルト | 説明 |
 |---|---|---|---|
-| `date` | `YYYY-MM-DD` | なし（全件） | JST基準の日付フィルタ |
+| `date` | `YYYY-MM-DD` | なし | JST基準の日付フィルタ（DESC 順） |
+| `start` | ISO 8601 datetime | なし | datetime 範囲の開始（`end` と同時指定、ASC 順） |
+| `end` | ISO 8601 datetime | なし | datetime 範囲の終了 |
 | `limit` | int | 200 | 最大取得件数（上限 500） |
+
+`start`/`end` は `date` より優先される。トレンドタブはこちらを使用。
 
 ## 重要な注意事項
 

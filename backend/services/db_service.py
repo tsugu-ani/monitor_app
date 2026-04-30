@@ -63,6 +63,30 @@ def save_record(monitor_type: Optional[str], vital_data: VitalData) -> Optional[
         return None
 
 
+def update_record(record_id: str, vital_data: VitalData) -> bool:
+    """バイタルレコードを更新する。
+
+    Returns:
+        True: 更新成功、False: 対象なし・未設定・エラー時
+    """
+    if not settings.database_url:
+        return False
+
+    data = vital_data.model_dump()
+    values = [data[f] for f in _VITAL_FIELDS]
+    set_str = ", ".join([f"{f} = %s" for f in _VITAL_FIELDS])
+    sql = f"UPDATE vital_records SET {set_str} WHERE id = %s"
+
+    try:
+        with _get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql, values + [record_id])
+                return cur.rowcount > 0
+    except Exception as e:
+        logger.error("DB更新エラー: %s", e)
+        return False
+
+
 def get_records(limit: int = 200, date: Optional[str] = None) -> list[dict]:
     """バイタル記録を返す（新しい順）。
 

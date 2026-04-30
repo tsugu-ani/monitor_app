@@ -1,8 +1,8 @@
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 
-from models.schemas import AnalyzeResponse, VitalRecord
+from models.schemas import AnalyzeResponse, VitalData, VitalRecord
 from services.claude_service import analyze_image
-from services.db_service import get_records, save_record
+from services.db_service import get_records, save_record, update_record
 from services.image_service import validate_and_process
 from services.monitor_skills import MONITOR_OPTIONS
 
@@ -48,4 +48,14 @@ async def analyze(
         monitor_type=result.resolved_monitor_type or None,
         auto_detected=result.auto_detected,
         record_saved_at=saved["recorded_at"] if saved else None,
+        record_id=saved["id"] if saved else None,
     )
+
+
+@router.patch("/records/{record_id}")
+def patch_record(record_id: str, body: VitalData):
+    """撮影記録のバイタル値を手動修正する。"""
+    ok = update_record(record_id, body)
+    if not ok:
+        raise HTTPException(status_code=404, detail="レコードが見つかりません")
+    return {"success": True}

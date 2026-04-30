@@ -15,6 +15,17 @@ async function fetchRecords(date = '', limit = 200) {
     return res.json();
 }
 
+async function updateRecord(id, data) {
+    const res = await fetch(`/api/records/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.detail || `更新エラー (${res.status})`);
+    return json;
+}
+
 async function analyzeImage(blob, monitorType = '') {
     const formData = new FormData();
     formData.append('file', blob, 'capture.jpg');

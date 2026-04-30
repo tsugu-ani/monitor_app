@@ -656,5 +656,191 @@ main {
     margin-left: 2px;
 }
 
+/* ===== 記録カード 編集ボタン ===== */
+.history-edit-btn {
+    margin-left: auto;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--text-muted);
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.15s, color 0.15s;
+    flex-shrink: 0;
+}
+
+.history-edit-btn:hover,
+.history-edit-btn:active {
+    background: var(--border);
+    color: var(--text);
+}
+
+/* ===== 編集モーダル ===== */
+.edit-modal-sheet {
+    background: var(--bg);
+}
+
+.edit-modal-header {
+    background: var(--card-bg);
+    border-bottom: 1px solid var(--border);
+}
+
+.edit-modal-title {
+    color: var(--text);
+}
+
+.edit-modal-close {
+    background: var(--bg) !important;
+    color: var(--text-muted) !important;
+}
+
+.edit-modal-close:hover  { background: var(--border) !important; }
+
+.edit-modal-body {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 12px;
+}
+
+/* 編集フォームグループ */
+.edit-group {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.edit-group-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 9px 14px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+}
+
+.edit-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+}
+
+.edit-field {
+    background: var(--card-bg);
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.edit-field-label {
+    font-size: 10px;
+    color: var(--text-muted);
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.edit-field-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.edit-field-input {
+    flex: 1;
+    min-width: 0;
+    font-size: 18px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+    border: none;
+    border-bottom: 2px solid var(--border);
+    background: transparent;
+    outline: none;
+    padding: 2px 0;
+    font-family: inherit;
+}
+
+.edit-field-input:focus { border-bottom-color: var(--accent); }
+.edit-field-input::placeholder { color: var(--null-value); font-weight: 400; font-size: 16px; }
+
+.edit-field-unit {
+    font-size: 11px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+.edit-notes-area {
+    display: block;
+    width: 100%;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: var(--text);
+    border: none;
+    background: transparent;
+    outline: none;
+    resize: none;
+    font-family: inherit;
+    line-height: 1.6;
+    min-height: 72px;
+}
+
+.edit-modal-footer {
+    display: flex;
+    gap: 8px;
+    padding: 12px;
+    background: var(--card-bg);
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+}
+
+.edit-cancel-btn {
+    flex: 1;
+    padding: 13px;
+    background: var(--bg);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.15s;
+}
+
+.edit-cancel-btn:hover { background: var(--border); }
+
+.edit-save-btn {
+    flex: 2;
+    padding: 13px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.15s;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
+}
+
+.edit-save-btn:hover    { background: var(--capture-hover); }
+.edit-save-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
 /* ===== ユーティリティ ===== */
 .hidden { display: none !important; }

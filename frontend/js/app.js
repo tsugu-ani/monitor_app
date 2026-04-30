@@ -171,6 +171,7 @@ shutterBtn.addEventListener('click', async () => {
         renderDetectedMonitor(result.auto_detected, result.monitor_type);
         if (result.record_saved_at) {
             prependRecord({
+                id: result.record_id || null,
                 ...result.data,
                 recorded_at: result.record_saved_at,
                 monitor_type: result.monitor_type || null,
@@ -229,6 +230,125 @@ function renderDetectedMonitor(autoDetected, monitorTypeId) {
     detectedMonitor.classList.remove('hidden');
 }
 
+// ===== 編集モーダル =====
+const editModal         = document.getElementById('edit-modal');
+const editModalBackdrop = document.getElementById('edit-modal-backdrop');
+const editModalClose    = document.getElementById('edit-modal-close');
+const editModalBody     = document.getElementById('edit-modal-body');
+const editSaveBtn       = document.getElementById('edit-save-btn');
+const editCancelBtn     = document.getElementById('edit-cancel-btn');
+
+let editingRecord = null;
+let editingCard   = null;
+
+const recordsMap = new Map(); // id -> record
+
+function openEditModal(record, card) {
+    editingRecord = { ...record };
+    editingCard   = card;
+    buildEditForm(record);
+    editModal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeEditModal() {
+    editModal.classList.add('hidden');
+    document.body.style.overflow = '';
+    editingRecord = null;
+    editingCard   = null;
+}
+
+editModalClose.addEventListener('click', closeEditModal);
+editModalBackdrop.addEventListener('click', closeEditModal);
+editCancelBtn.addEventListener('click', closeEditModal);
+
+function buildEditForm(record) {
+    editModalBody.innerHTML = '';
+
+    VITAL_GROUPS.forEach(({ title, items }) => {
+        const group = document.createElement('div');
+        group.className = 'edit-group';
+
+        const groupTitle = document.createElement('div');
+        groupTitle.className = 'edit-group-title';
+        groupTitle.textContent = title;
+        group.appendChild(groupTitle);
+
+        const grid = document.createElement('div');
+        grid.className = 'edit-grid';
+
+        items.forEach(({ key, label, unit }) => {
+            const val = record[key];
+            const inputVal = (val !== null && val !== undefined) ? formatValue(val) : '';
+
+            const field = document.createElement('div');
+            field.className = 'edit-field';
+            field.innerHTML = `
+                <span class="edit-field-label">${label}</span>
+                <div class="edit-field-row">
+                    <input class="edit-field-input" type="number" step="any"
+                           data-key="${key}" value="${inputVal}" placeholder="---">
+                    <span class="edit-field-unit">${unit}</span>
+                </div>`;
+            grid.appendChild(field);
+        });
+
+        group.appendChild(grid);
+        editModalBody.appendChild(group);
+    });
+
+    // notes は DOM 操作でセット（XSS 対策）
+    const notesGroup = document.createElement('div');
+    notesGroup.className = 'edit-group';
+
+    const notesTitle = document.createElement('div');
+    notesTitle.className = 'edit-group-title';
+    notesTitle.textContent = '補足情報';
+
+    const notesArea = document.createElement('textarea');
+    notesArea.className = 'edit-notes-area';
+    notesArea.dataset.key = 'notes';
+    notesArea.placeholder = '補足情報を入力...';
+    notesArea.rows = 3;
+    notesArea.value = record.notes || '';
+
+    notesGroup.appendChild(notesTitle);
+    notesGroup.appendChild(notesArea);
+    editModalBody.appendChild(notesGroup);
+}
+
+editSaveBtn.addEventListener('click', async () => {
+    if (!editingRecord) return;
+
+    editSaveBtn.disabled = true;
+    editSaveBtn.textContent = '保存中...';
+
+    const updates = {};
+    editModalBody.querySelectorAll('[data-key]').forEach(el => {
+        const key = el.dataset.key;
+        if (el.tagName === 'TEXTAREA') {
+            updates[key] = el.value.trim() || null;
+        } else {
+            const v = el.value.trim();
+            updates[key] = v === '' ? null : parseFloat(v);
+        }
+    });
+
+    try {
+        await updateRecord(editingRecord.id, updates);
+        const updatedRecord = { ...editingRecord, ...updates };
+        recordsMap.set(editingRecord.id, updatedRecord);
+        const newCard = buildHistoryCard(updatedRecord);
+        editingCard.replaceWith(newCard);
+        closeEditModal();
+    } catch (err) {
+        alert(err.message || '保存に失敗しました');
+    } finally {
+        editSaveBtn.disabled = false;
+        editSaveBtn.textContent = '保存';
+    }
+});
+
 // ===== 撮影記録 =====
 const historyList   = document.getElementById('history-list');
 const historyDateEl = document.getElementById('history-date');
@@ -258,6 +378,15 @@ function shiftDate(delta) {
 // 日付変更時に再読み込み
 historyDateEl.addEventListener('change', loadHistory);
 
+// 編集ボタンのイベント委任
+historyList.addEventListener('click', e => {
+    const btn = e.target.closest('.history-edit-btn');
+    if (!btn) return;
+    const id = btn.dataset.recordId;
+    const record = recordsMap.get(id);
+    if (record) openEditModal(record, btn.closest('.history-card'));
+});
+
 async function loadHistory() {
     historyList.innerHTML = '<p class="history-loading">読み込み中...</p>';
     const records = await fetchRecords(historyDateEl.value);
@@ -278,6 +407,8 @@ function prependRecord(record) {
 }
 
 function buildHistoryCard(record) {
+    if (record.id) recordsMap.set(record.id, record);
+
     const card = document.createElement('div');
     card.className = 'history-card';
 
@@ -289,6 +420,15 @@ function buildHistoryCard(record) {
 
     const label = getMonitorLabel(record.monitor_type);
     const badgeHtml = label ? `<span class="history-badge">${label}</span>` : '';
+
+    const editBtnHtml = record.id ? `
+        <button class="history-edit-btn" data-record-id="${record.id}" type="button" aria-label="修正">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+            </svg>
+        </button>` : '';
 
     const gridHtml = VITAL_GROUPS.map(({ title, items }) => {
         const itemsHtml = items.map(({ key, label, unit }) => {
@@ -309,6 +449,7 @@ function buildHistoryCard(record) {
         <div class="history-meta">
             <span class="history-time">${timeStr}</span>
             ${badgeHtml}
+            ${editBtnHtml}
         </div>
         <div class="history-all-vitals">${gridHtml}</div>`;
     return card;

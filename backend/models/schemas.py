@@ -39,4 +39,5 @@ class AnalyzeResponse(BaseModel):
     monitor_type: Optional[str] = None
     auto_detected: bool = False  # True: monitor_type が自動識別された
     record_saved_at: Optional[str] = None  # DB 保存時刻 (ISO 8601)
+    record_id: Optional[str] = None        # DB 保存 UUID
     error: Optional[str] = None

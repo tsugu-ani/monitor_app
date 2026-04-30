@@ -24,6 +24,7 @@
     <div class="tab-bar" role="tablist">
         <button class="tab-btn active" data-tab="capture" role="tab" aria-selected="true">撮影</button>
         <button class="tab-btn" data-tab="history" role="tab" aria-selected="false">撮影記録</button>
+        <button class="tab-btn" data-tab="trend"   role="tab" aria-selected="false">トレンド</button>
     </div>
 </header>
 
@@ -62,6 +63,44 @@
         <div id="notes-card" class="notes-card hidden">
             <strong>補足情報</strong>
             <span id="notes-text"></span>
+        </div>
+
+    </div>
+
+    <!-- ===== トレンドタブ ===== -->
+    <div id="tab-trend" class="tab-panel hidden">
+
+        <!-- 項目選択 -->
+        <div class="trend-field-card">
+            <label class="trend-ctrl-label" for="trend-field-select">表示項目</label>
+            <select id="trend-field-select" class="trend-field-select"></select>
+        </div>
+
+        <!-- 期間選択 -->
+        <div class="trend-range-card">
+            <div class="trend-range-row">
+                <span class="trend-ctrl-label">開始</span>
+                <input type="datetime-local" id="trend-start" class="trend-datetime-input">
+            </div>
+            <div class="trend-range-row">
+                <span class="trend-ctrl-label">終了</span>
+                <input type="datetime-local" id="trend-end" class="trend-datetime-input">
+            </div>
+            <button id="trend-search-btn" class="trend-search-btn" type="button">更新</button>
+        </div>
+
+        <!-- グラフ -->
+        <div class="trend-chart-wrap">
+            <canvas id="trend-chart"></canvas>
+        </div>
+        <p id="trend-no-data" class="trend-no-data hidden">この期間のデータがありません</p>
+
+        <!-- 一覧 -->
+        <div class="trend-list-section">
+            <div class="trend-list-header">記録一覧</div>
+            <div id="trend-list" class="trend-list">
+                <p class="trend-loading">項目を選択してください</p>
+            </div>
         </div>
 
     </div>
@@ -159,8 +198,10 @@
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script src="/js/camera.js"></script>
 <script src="/js/api.js"></script>
 <script src="/js/app.js"></script>
+<script src="/js/trend.js"></script>
 </body>
 </html>

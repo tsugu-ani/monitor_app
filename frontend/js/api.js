@@ -7,9 +7,11 @@ async function fetchMonitorOptions() {
     return json.monitors || [];
 }
 
-async function fetchRecords(date = '', limit = 200) {
+async function fetchRecords(date = '', limit = 200, start = '', end = '') {
     const params = new URLSearchParams({ limit });
-    if (date) params.set('date', date);
+    if (date)  params.set('date', date);
+    if (start) params.set('start', start);
+    if (end)   params.set('end', end);
     const res = await fetch(`/api/records?${params}`);
     if (!res.ok) return [];
     return res.json();

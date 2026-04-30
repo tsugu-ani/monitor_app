@@ -87,12 +87,19 @@ def update_record(record_id: str, vital_data: VitalData) -> bool:
         return False
 
 
-def get_records(limit: int = 200, date: Optional[str] = None) -> list[dict]:
-    """バイタル記録を返す（新しい順）。
+def get_records(
+    limit: int = 200,
+    date: Optional[str] = None,
+    start: Optional[str] = None,
+    end: Optional[str] = None,
+) -> list[dict]:
+    """バイタル記録を返す。
 
     Args:
         limit: 最大取得件数
         date:  絞り込む日付（YYYY-MM-DD、JST基準）。None の場合は全件。
+        start: 開始日時（ISO 8601）。end と同時指定で datetime 範囲フィルタ（ASC順）。
+        end:   終了日時（ISO 8601）。
 
     Returns:
         レコードのリスト。DATABASE_URL 未設定・エラー時は空リスト。
@@ -100,7 +107,15 @@ def get_records(limit: int = 200, date: Optional[str] = None) -> list[dict]:
     if not settings.database_url:
         return []
 
-    if date:
+    if start and end:
+        sql = """
+            SELECT * FROM vital_records
+            WHERE recorded_at >= %s AND recorded_at <= %s
+            ORDER BY recorded_at ASC
+            LIMIT %s
+        """
+        params = (start, end, limit)
+    elif date:
         # recorded_at は TIMESTAMPTZ のため JST (Asia/Tokyo) に変換してから日付比較
         sql = """
             SELECT * FROM vital_records

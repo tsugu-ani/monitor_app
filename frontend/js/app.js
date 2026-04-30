@@ -54,6 +54,7 @@ const tabBtns   = document.querySelectorAll('.tab-btn');
 const tabPanels = {
     capture: document.getElementById('tab-capture'),
     history: document.getElementById('tab-history'),
+    trend:   document.getElementById('tab-trend'),
 };
 
 tabBtns.forEach(btn => {

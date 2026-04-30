@@ -656,6 +656,175 @@ main {
     margin-left: 2px;
 }
 
+/* ===== トレンドタブ ===== */
+
+.trend-field-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--card-bg);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    margin-bottom: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+
+.trend-ctrl-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.trend-field-select {
+    flex: 1;
+    font-size: 14px;
+    color: var(--text);
+    background: transparent;
+    border: none;
+    outline: none;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+    font-family: inherit;
+}
+
+.trend-range-card {
+    background: var(--card-bg);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    margin-bottom: 10px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.trend-range-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.trend-datetime-input {
+    flex: 1;
+    font-size: 14px;
+    color: var(--text);
+    border: none;
+    border-bottom: 1px solid var(--border);
+    background: transparent;
+    outline: none;
+    padding: 3px 0;
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.trend-datetime-input:focus { border-bottom-color: var(--accent); }
+
+.trend-search-btn {
+    width: 100%;
+    padding: 11px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.15s;
+    letter-spacing: 0.04em;
+}
+
+.trend-search-btn:hover { background: var(--capture-hover); }
+
+.trend-chart-wrap {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    padding: 14px 10px 10px;
+    margin-bottom: 10px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    height: 230px;
+    position: relative;
+}
+
+.trend-no-data {
+    text-align: center;
+    font-size: 13px;
+    color: var(--text-muted);
+    padding: 10px 0 6px;
+    margin-bottom: 10px;
+}
+
+.trend-list-section {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.trend-list-header {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 9px 14px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+}
+
+.trend-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.trend-list-item {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+}
+
+.trend-list-item:last-child { border-bottom: none; }
+
+.trend-list-time {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.trend-list-value {
+    font-size: 20px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--filled-value);
+    line-height: 1;
+    flex: 1;
+    text-align: right;
+}
+
+.trend-list-unit {
+    font-size: 11px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+    min-width: 36px;
+}
+
+.trend-loading {
+    padding: 20px 14px;
+    font-size: 13px;
+    color: var(--text-muted);
+    text-align: center;
+}
+
 /* ===== 記録カード 編集ボタン ===== */
 .history-edit-btn {
     margin-left: auto;

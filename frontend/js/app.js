@@ -396,15 +396,44 @@ async function loadHistory() {
         return;
     }
     historyList.innerHTML = '';
-    records.forEach(r => historyList.appendChild(buildHistoryCard(r)));
+
+    // 時間単位でグループ化（DESC 順を維持）
+    const hourGroups = new Map();
+    records.forEach(r => {
+        const hour = new Date(r.recorded_at).getHours();
+        if (!hourGroups.has(hour)) hourGroups.set(hour, []);
+        hourGroups.get(hour).push(r);
+    });
+    hourGroups.forEach((recs, hour) => historyList.appendChild(buildHourBlock(hour, recs)));
 }
 
 function prependRecord(record) {
-    // 撮影記録タブが今日を表示中の場合のみ先頭に追加
     if (historyDateEl.value !== todayStr()) return;
     const empty = historyList.querySelector('.history-empty, .history-loading');
     if (empty) empty.remove();
-    historyList.insertBefore(buildHistoryCard(record), historyList.firstChild);
+
+    const hour = new Date(record.recorded_at).getHours();
+    const existingBlock = historyList.querySelector(`.history-hour-block[data-hour="${hour}"]`);
+    if (existingBlock) {
+        const firstCard = existingBlock.querySelector('.history-card');
+        existingBlock.insertBefore(buildHistoryCard(record), firstCard || null);
+    } else {
+        historyList.insertBefore(buildHourBlock(hour, [record]), historyList.firstChild);
+    }
+}
+
+function buildHourBlock(hour, records) {
+    const block = document.createElement('div');
+    block.className = 'history-hour-block';
+    block.dataset.hour = String(hour);
+
+    const header = document.createElement('div');
+    header.className = 'history-hour-header';
+    header.textContent = `${String(hour).padStart(2, '0')}時台`;
+    block.appendChild(header);
+
+    records.forEach(r => block.appendChild(buildHistoryCard(r)));
+    return block;
 }
 
 function buildHistoryCard(record) {

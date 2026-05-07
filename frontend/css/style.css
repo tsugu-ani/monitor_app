@@ -551,7 +551,7 @@ main {
 
 /* ===== 時間単位グループ ===== */
 .history-hour-block {
-    background: var(--card-bg);
+    background: var(--bg);
     border-radius: var(--radius);
     overflow: hidden;
     box-shadow: 0 1px 3px rgba(0,0,0,0.08);
@@ -568,12 +568,20 @@ main {
     letter-spacing: 0.04em;
 }
 
-.history-card {
-    padding: 10px 14px;
-    border-bottom: 1px solid var(--border);
+.history-hour-cards {
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
 }
 
-.history-card:last-child { border-bottom: none; }
+.history-card {
+    background: var(--card-bg);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    overflow: hidden;
+    padding: 10px 14px;
+}
 
 .history-meta {
     display: flex;

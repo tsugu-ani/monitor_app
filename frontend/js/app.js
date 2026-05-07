@@ -415,8 +415,9 @@ function prependRecord(record) {
     const hour = new Date(record.recorded_at).getHours();
     const existingBlock = historyList.querySelector(`.history-hour-block[data-hour="${hour}"]`);
     if (existingBlock) {
-        const firstCard = existingBlock.querySelector('.history-card');
-        existingBlock.insertBefore(buildHistoryCard(record), firstCard || null);
+        const cardsWrapper = existingBlock.querySelector('.history-hour-cards');
+        const firstCard = cardsWrapper.querySelector('.history-card');
+        cardsWrapper.insertBefore(buildHistoryCard(record), firstCard || null);
     } else {
         historyList.insertBefore(buildHourBlock(hour, [record]), historyList.firstChild);
     }
@@ -432,7 +433,10 @@ function buildHourBlock(hour, records) {
     header.textContent = `${String(hour).padStart(2, '0')}時台`;
     block.appendChild(header);
 
-    records.forEach(r => block.appendChild(buildHistoryCard(r)));
+    const cardsWrapper = document.createElement('div');
+    cardsWrapper.className = 'history-hour-cards';
+    records.forEach(r => cardsWrapper.appendChild(buildHistoryCard(r)));
+    block.appendChild(cardsWrapper);
     return block;
 }
 

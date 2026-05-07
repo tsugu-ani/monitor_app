@@ -12,73 +12,59 @@ const trendFieldPanel  = document.getElementById('trend-field-panel');
 let trendChart       = null;
 let trendInitialized = false;
 
-// VITAL_GROUPS は app.js で定義済み
-const VITAL_ITEMS_FLAT = VITAL_GROUPS.flatMap(g => g.items);
-
-const CHART_COLORS = [
-    '#2563eb', '#dc2626', '#16a34a', '#d97706',
-    '#7c3aed', '#0891b2', '#db2777', '#65a30d',
-    '#ea580c', '#0284c7',
+const TREND_ITEMS = [
+    { key: 'heart_rate',       label: '心拍数',      unit: 'bpm'  },
+    { key: 'bp_mean',          label: '血圧（平均）', unit: 'mmHg' },
+    { key: 'respiratory_rate', label: '呼吸数',       unit: '回/分' },
+    { key: 'body_temperature', label: '体温',         unit: '°C'   },
 ];
+
+const CHART_COLORS = ['#2563eb', '#dc2626', '#16a34a', '#d97706'];
 
 // ===== 項目チップ初期化 =====
 
 function initTrendFieldChips() {
-    let colorIndex = 0;
-    VITAL_GROUPS.forEach(({ title, items }) => {
-        const group = document.createElement('div');
-        group.className = 'trend-chip-group';
+    const chipRow = document.createElement('div');
+    chipRow.className = 'trend-chip-row';
 
-        const groupLabel = document.createElement('div');
-        groupLabel.className = 'trend-chip-group-label';
-        groupLabel.textContent = title;
-        group.appendChild(groupLabel);
+    TREND_ITEMS.forEach(({ key, label }, i) => {
+        const color = CHART_COLORS[i];
 
-        const chipRow = document.createElement('div');
-        chipRow.className = 'trend-chip-row';
+        const chip = document.createElement('label');
+        chip.className = 'trend-chip';
+        chip.style.setProperty('--chip-color', color);
 
-        items.forEach(({ key, label }) => {
-            const color = CHART_COLORS[colorIndex % CHART_COLORS.length];
-            colorIndex++;
-
-            const chip = document.createElement('label');
-            chip.className = 'trend-chip';
-            chip.style.setProperty('--chip-color', color);
-
-            const cb = document.createElement('input');
-            cb.type = 'checkbox';
-            cb.value = key;
-            cb.dataset.color = color;
-            cb.addEventListener('change', () => {
-                chip.classList.toggle('is-checked', cb.checked);
-                chip.style.backgroundColor = cb.checked ? `${color}18` : '';
-                loadTrend();
-            });
-
-            chip.appendChild(cb);
-            chip.appendChild(document.createTextNode(label));
-            chipRow.appendChild(chip);
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.value = key;
+        cb.dataset.color = color;
+        cb.addEventListener('change', () => {
+            chip.classList.toggle('is-checked', cb.checked);
+            chip.style.backgroundColor = cb.checked ? `${color}18` : '';
+            loadTrend();
         });
 
-        group.appendChild(chipRow);
-        trendFieldPanel.appendChild(group);
+        chip.appendChild(cb);
+        chip.appendChild(document.createTextNode(label));
+        chipRow.appendChild(chip);
     });
+
+    trendFieldPanel.appendChild(chipRow);
 
     // デフォルト: 心拍数を選択
     const firstCb = trendFieldPanel.querySelector('input[type="checkbox"]');
     if (firstCb) {
         firstCb.checked = true;
         const chip = firstCb.closest('.trend-chip');
-        const color = firstCb.dataset.color;
         chip.classList.add('is-checked');
-        chip.style.backgroundColor = `${color}18`;
+        chip.style.backgroundColor = `${firstCb.dataset.color}18`;
     }
 }
 
 function getSelectedItems() {
     return Array.from(trendFieldPanel.querySelectorAll('input[type="checkbox"]:checked'))
         .map(cb => {
-            const item = VITAL_ITEMS_FLAT.find(i => i.key === cb.value);
+            const item = TREND_ITEMS.find(i => i.key === cb.value);
             return item ? { ...item, color: cb.dataset.color } : null;
         })
         .filter(Boolean);

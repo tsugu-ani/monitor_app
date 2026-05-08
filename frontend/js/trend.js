@@ -8,9 +8,11 @@ const trendSearchBtn   = document.getElementById('trend-search-btn');
 const trendNoData      = document.getElementById('trend-no-data');
 const trendListEl      = document.getElementById('trend-list');
 const trendFieldPanel  = document.getElementById('trend-field-panel');
+const trendFilterInput = document.getElementById('trend-filter');
 
-let trendChart       = null;
-let trendInitialized = false;
+let trendChart          = null;
+let trendInitialized    = false;
+let trendRecordsCache   = null;  // 最後に取得したレコード（フィルター再適用用）
 
 const TREND_ITEMS = [
     { key: 'heart_rate',       label: '心拍数',      unit: 'bpm'  },
@@ -41,7 +43,11 @@ function initTrendFieldChips() {
         cb.addEventListener('change', () => {
             chip.classList.toggle('is-checked', cb.checked);
             chip.style.backgroundColor = cb.checked ? `${color}18` : '';
-            loadTrend();
+            if (trendRecordsCache) {
+                renderFromCache(getSelectedItems());
+            } else {
+                loadTrend();
+            }
         });
 
         chip.appendChild(cb);
@@ -51,14 +57,13 @@ function initTrendFieldChips() {
 
     trendFieldPanel.appendChild(chipRow);
 
-    // デフォルト: 心拍数を選択
-    const firstCb = trendFieldPanel.querySelector('input[type="checkbox"]');
-    if (firstCb) {
-        firstCb.checked = true;
-        const chip = firstCb.closest('.trend-chip');
+    // デフォルト: 全項目を選択
+    trendFieldPanel.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        cb.checked = true;
+        const chip = cb.closest('.trend-chip');
         chip.classList.add('is-checked');
-        chip.style.backgroundColor = `${firstCb.dataset.color}18`;
-    }
+        chip.style.backgroundColor = `${cb.dataset.color}18`;
+    });
 }
 
 function getSelectedItems() {
@@ -84,32 +89,28 @@ function localToISO(datetimeLocalStr) {
 
 // ===== デフォルト期間設定 =====
 
-async function initTrendDefaults() {
+function initTrendDefaults() {
     const now = new Date();
     setDatetimeInput(trendEndInput, now);
 
-    const pad = n => String(n).padStart(2, '0');
-    const todayStr = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
-
-    try {
-        const records = await fetchRecords(todayStr, 500);
-        if (records.length > 0) {
-            // DESC 順で返るので末尾が最古
-            const oldest = new Date(records[records.length - 1].recorded_at);
-            setDatetimeInput(trendStartInput, oldest);
-        } else {
-            const startOfDay = new Date(now);
-            startOfDay.setHours(0, 0, 0, 0);
-            setDatetimeInput(trendStartInput, startOfDay);
-        }
-    } catch {
-        const startOfDay = new Date(now);
-        startOfDay.setHours(0, 0, 0, 0);
-        setDatetimeInput(trendStartInput, startOfDay);
-    }
+    const startOfDay = new Date(now);
+    startOfDay.setHours(0, 0, 0, 0);
+    setDatetimeInput(trendStartInput, startOfDay);
 }
 
 // ===== データ取得・表示 =====
+
+function applyFilter(records) {
+    const q = trendFilterInput.value.trim();
+    if (!q) return records;
+
+    const isNum = /^\d+$/.test(q);
+    return records.filter(r => {
+        if (isNum && r.chart_number != null && String(r.chart_number).includes(q)) return true;
+        if (r.patient_name && r.patient_name.toLowerCase().includes(q.toLowerCase())) return true;
+        return false;
+    });
+}
 
 async function loadTrend() {
     const selectedItems = getSelectedItems();
@@ -130,24 +131,33 @@ async function loadTrend() {
 
     try {
         const records = await fetchRecords('', 500, startISO, endISO);
-
-        // 少なくとも1つの選択項目に値があるレコードのみ
-        const filtered = records.filter(r =>
-            selectedItems.some(item => r[item.key] !== null && r[item.key] !== undefined)
-        );
-
-        if (filtered.length === 0) {
-            trendListEl.innerHTML = '';
-            trendNoData.classList.remove('hidden');
-            clearChart();
-            return;
-        }
-
-        renderTrendChart(filtered, selectedItems);
-        renderTrendList(filtered, selectedItems);
+        trendRecordsCache = records;
+        renderFromCache(selectedItems);
     } catch {
         trendListEl.innerHTML = '<p class="trend-loading">読み込みに失敗しました</p>';
     }
+}
+
+function renderFromCache(selectedItems) {
+    if (!trendRecordsCache) return;
+
+    const patientFiltered = applyFilter(trendRecordsCache);
+
+    // 少なくとも1つの選択項目に値があるレコードのみ
+    const filtered = patientFiltered.filter(r =>
+        selectedItems.some(item => r[item.key] !== null && r[item.key] !== undefined)
+    );
+
+    if (filtered.length === 0) {
+        trendListEl.innerHTML = '';
+        trendNoData.classList.remove('hidden');
+        clearChart();
+        return;
+    }
+
+    trendNoData.classList.add('hidden');
+    renderTrendChart(filtered, selectedItems);
+    renderTrendList(filtered, selectedItems);
 }
 
 // ===== グラフ =====
@@ -283,15 +293,62 @@ function renderTrendList(records, selectedItems) {
 
 trendSearchBtn.addEventListener('click', loadTrend);
 
-// トレンドタブが初めてクリックされたときに初期化
+trendFilterInput.addEventListener('input', () => {
+    const selectedItems = getSelectedItems();
+    if (selectedItems.length > 0 && trendRecordsCache) {
+        renderFromCache(selectedItems);
+    }
+});
+
+// トレンドタブが開かれたときの描画
 document.querySelectorAll('.tab-btn[data-tab="trend"]').forEach(btn => {
     btn.addEventListener('click', () => {
-        if (!trendInitialized) {
+        if (trendRecordsCache !== null) {
+            // プリフェッチ済み → 即座に描画（API 呼び出しなし）
+            renderFromCache(getSelectedItems());
+        } else if (!trendInitialized) {
+            // プリフェッチ未開始（通常は起きない）
             trendInitialized = true;
-            initTrendDefaults().then(loadTrend);
+            initTrendDefaults();
+            loadTrend();
+        } else {
+            // プリフェッチ進行中 → ローディング表示（完了時に自動描画）
+            trendListEl.innerHTML = '<p class="trend-loading">読み込み中...</p>';
         }
     });
 });
 
+// ===== バックグラウンドプリフェッチ =====
+// ページ読み込み直後にデータ取得を開始し、タブを開いたときのレイテンシをゼロにする
+
+async function prefetchTrend() {
+    initTrendDefaults();
+    trendInitialized = true;
+    if (!trendStartInput.value || !trendEndInput.value) return;
+    try {
+        const records = await fetchRecords('', 500, localToISO(trendStartInput.value), localToISO(trendEndInput.value));
+        trendRecordsCache = records;
+        // タブが既に表示中なら即座に描画
+        if (!document.getElementById('tab-trend').classList.contains('hidden')) {
+            renderFromCache(getSelectedItems());
+        }
+    } catch { /* 失敗時はタブを開いたときに loadTrend() で再試行 */ }
+}
+
+// ===== 撮影後のリアルタイム反映 =====
+// app.js から呼び出す: 新規レコードをキャッシュに追記して再 fetch を不要にする
+
+function trendPushRecord(record) {
+    if (!trendRecordsCache) return;
+    const start = trendStartInput.value ? new Date(trendStartInput.value) : null;
+    if (start && new Date(record.recorded_at) < start) return;
+
+    trendRecordsCache.push(record);
+    trendRecordsCache.sort((a, b) => new Date(a.recorded_at) - new Date(b.recorded_at));
+    // 終了時刻を新しいレコードに合わせて延長（次回「更新」時に漏れなく取得するため）
+    setDatetimeInput(trendEndInput, new Date(record.recorded_at));
+}
+
 // 初期化
 initTrendFieldChips();
+prefetchTrend();

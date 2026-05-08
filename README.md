@@ -13,6 +13,8 @@
 - **撮影記録の保存**: 撮影のたびに全項目を Supabase（PostgreSQL）に自動保存する
 - **日付別閲覧**: 撮影記録タブで日付を指定して過去の記録を確認できる
 - **手動修正**: AI の読み取り誤りを人手で修正して DB に上書き保存できる
+- **記録の削除**: 修正モーダルの削除ボタンで記録を DB から削除できる
+- **患者情報の手入力**: カルテ番号・名前・体重を修正モーダルから手入力して記録に紐付けられる
 - **トレンド表示**: 複数の項目を同時に選択し、指定期間の時系列グラフと一覧を確認できる
 - **読取不可の明示**: 認識できなかった項目は「---」と表示（推測値は表示しない）
 - **モバイル最適化**: スマートフォン・タブレットの縦画面に対応
@@ -94,7 +96,8 @@
 ┌──────────────────────────────┐
 │  ‹  2026/04/20  ›            │  ← 日付ピッカー
 ├──────────────────────────────┤
-│ 14:32  [Bio-Scope AM140]  ✏  │  ← 右端の ✏ で値を修正可能
+│ 14:32  [Bio-Scope AM140]  ✏  │  ← 右端の ✏ で値を修正・削除可能
+│ [カルテ番号 12345] [体重 3.2 kg] │  ← 患者情報チップ（入力済み項目のみ表示）
 │ 基本バイタル                  │
 │ 心拍数        75 bpm         │  ← 縦1列リスト（ラベル左・値右）
 │ 血圧（収縮期） 120 mmHg      │
@@ -114,13 +117,18 @@
 | `›` ボタン | 翌日に移動 |
 | 日付をタップ | カレンダーから任意の日付を選択 |
 
-#### 記録の手動修正
+#### 記録の手動修正・患者情報の入力
 
 各記録カード右上の **✏ ボタン** をタップすると修正モーダルが開きます。
 
 1. 現在の値がフォームに入力された状態で開く
-2. 誤りのある項目を修正する（空欄にすると「---」に戻る）
-3. 「保存」をタップ → DB に上書き保存され、カードが即時更新される
+2. 「患者情報」グループ（カルテ番号・名前・体重）を入力できる
+3. 誤りのあるバイタル項目を修正する（空欄にすると「---」に戻る）
+4. 「保存」をタップ → DB に上書き保存され、カードが即時更新される
+
+#### 記録の削除
+
+修正モーダル下部の **「削除」ボタン** をタップすると、確認ダイアログの後に記録を DB から削除できます。
 
 ---
 
@@ -179,10 +187,20 @@ CREATE TABLE vital_records (
     etco2                NUMERIC, body_temperature NUMERIC, tidal_volume    NUMERIC,
     minute_ventilation   NUMERIC, peak_airway_pressure NUMERIC, iso_dial   NUMERIC,
     iso_inspired         NUMERIC, iso_expired     NUMERIC, gas_flow_o2     NUMERIC,
-    gas_flow_air         NUMERIC, fio2            NUMERIC, notes           TEXT
+    gas_flow_air         NUMERIC, fio2            NUMERIC,
+    chart_number         INTEGER, patient_name    TEXT,    body_weight     NUMERIC,
+    notes                TEXT
 );
 CREATE INDEX idx_vital_records_recorded_at ON vital_records (recorded_at DESC);
 ```
+
+> **既存テーブルへの追加**: すでにテーブルを作成済みの場合は SQL Editor で以下を実行してください。
+> ```sql
+> ALTER TABLE vital_records
+>   ADD COLUMN chart_number INTEGER,
+>   ADD COLUMN patient_name TEXT,
+>   ADD COLUMN body_weight  NUMERIC;
+> ```
 
 ### 2. アプリをセットアップする
 

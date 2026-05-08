@@ -22,6 +22,10 @@ class VitalData(BaseModel):
     gas_flow_o2: Optional[float] = None
     gas_flow_air: Optional[float] = None
     fio2: Optional[float] = None
+    # 患者情報（手入力）
+    chart_number: Optional[int] = None
+    patient_name: Optional[str] = None
+    body_weight: Optional[float] = None
     # 補足
     notes: Optional[str] = None
 

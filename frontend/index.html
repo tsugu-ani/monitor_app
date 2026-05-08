@@ -73,6 +73,15 @@
         <!-- 項目選択（チップ） -->
         <div id="trend-field-panel" class="trend-field-panel"></div>
 
+        <!-- フィルター -->
+        <div class="trend-filter-card">
+            <div class="trend-range-row">
+                <span class="trend-ctrl-label">絞込</span>
+                <input type="text" id="trend-filter" class="trend-filter-input"
+                       placeholder="名前 または カルテ番号（空欄で全件）" autocomplete="off">
+            </div>
+        </div>
+
         <!-- 期間選択 -->
         <div class="trend-range-card">
             <div class="trend-range-row">
@@ -190,6 +199,7 @@
 
         <div class="edit-modal-footer">
             <button id="edit-cancel-btn" class="edit-cancel-btn" type="button">キャンセル</button>
+            <button id="edit-delete-btn" class="edit-delete-btn" type="button">削除</button>
             <button id="edit-save-btn" class="edit-save-btn" type="button">保存</button>
         </div>
     </div>

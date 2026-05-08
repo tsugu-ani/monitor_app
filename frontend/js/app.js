@@ -178,12 +178,14 @@ shutterBtn.addEventListener('click', async () => {
         captureTime.textContent = `最終撮影: ${new Date().toLocaleTimeString('ja-JP')}`;
         renderDetectedMonitor(result.auto_detected, result.monitor_type);
         if (result.record_saved_at) {
-            prependRecord({
+            const newRecord = {
                 id: result.record_id || null,
                 ...result.data,
                 recorded_at: result.record_saved_at,
                 monitor_type: result.monitor_type || null,
-            });
+            };
+            prependRecord(newRecord);
+            trendPushRecord(newRecord);
         }
     } catch (err) {
         closeModal();

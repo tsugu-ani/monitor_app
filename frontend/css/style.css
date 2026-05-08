@@ -759,6 +759,31 @@ main {
     font-weight: 600;
 }
 
+.trend-filter-card {
+    background: var(--card-bg);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    margin-bottom: 10px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+
+.trend-filter-input {
+    flex: 1;
+    font-size: 14px;
+    color: var(--text);
+    border: none;
+    border-bottom: 1px solid var(--border);
+    background: transparent;
+    outline: none;
+    padding: 3px 0;
+    font-family: inherit;
+}
+
+.trend-filter-input:focus { border-bottom-color: var(--accent); }
+
+.trend-filter-input::placeholder { color: var(--text-muted); font-size: 13px; }
+
 .trend-range-card {
     background: var(--card-bg);
     border-radius: var(--radius-sm);

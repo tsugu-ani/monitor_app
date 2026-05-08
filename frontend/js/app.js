@@ -31,6 +31,13 @@ const VITAL_GROUPS = [
     },
 ];
 
+// ===== 患者情報項目定義（手入力）=====
+const PATIENT_FIELDS = [
+    { key: 'chart_number', label: 'カルテ番号',   unit: '',   inputType: 'number', step: '1'   },
+    { key: 'patient_name', label: '名前',         unit: '',   inputType: 'text'                },
+    { key: 'body_weight',  label: '体重',         unit: 'kg', inputType: 'number', step: 'any' },
+];
+
 // ===== DOM 参照 =====
 const captureBtn        = document.getElementById('capture-btn');
 const errorBanner       = document.getElementById('error-banner');
@@ -237,6 +244,7 @@ const editModalBackdrop = document.getElementById('edit-modal-backdrop');
 const editModalClose    = document.getElementById('edit-modal-close');
 const editModalBody     = document.getElementById('edit-modal-body');
 const editSaveBtn       = document.getElementById('edit-save-btn');
+const editDeleteBtn     = document.getElementById('edit-delete-btn');
 const editCancelBtn     = document.getElementById('edit-cancel-btn');
 
 let editingRecord = null;
@@ -263,8 +271,55 @@ editModalClose.addEventListener('click', closeEditModal);
 editModalBackdrop.addEventListener('click', closeEditModal);
 editCancelBtn.addEventListener('click', closeEditModal);
 
+function buildEditField({ key, label, unit, inputType = 'number', step = 'any' }, record) {
+    const val = record[key];
+    const isText = inputType === 'text';
+    const inputVal = (val !== null && val !== undefined) ? String(val) : '';
+
+    const field = document.createElement('div');
+    field.className = 'edit-field';
+
+    const labelEl = document.createElement('span');
+    labelEl.className = 'edit-field-label';
+    labelEl.textContent = label;
+
+    const rowEl = document.createElement('div');
+    rowEl.className = 'edit-field-row';
+
+    const input = document.createElement('input');
+    input.className = 'edit-field-input';
+    input.type = inputType;
+    if (!isText) input.step = step;
+    input.dataset.key = key;
+    input.value = inputVal;
+    input.placeholder = '---';
+
+    const unitEl = document.createElement('span');
+    unitEl.className = 'edit-field-unit';
+    unitEl.textContent = unit;
+
+    rowEl.appendChild(input);
+    rowEl.appendChild(unitEl);
+    field.appendChild(labelEl);
+    field.appendChild(rowEl);
+    return field;
+}
+
 function buildEditForm(record) {
     editModalBody.innerHTML = '';
+
+    // 患者情報グループ（先頭）
+    const patientGroup = document.createElement('div');
+    patientGroup.className = 'edit-group';
+    const patientTitle = document.createElement('div');
+    patientTitle.className = 'edit-group-title';
+    patientTitle.textContent = '患者情報';
+    patientGroup.appendChild(patientTitle);
+    const patientGrid = document.createElement('div');
+    patientGrid.className = 'edit-grid';
+    PATIENT_FIELDS.forEach(f => patientGrid.appendChild(buildEditField(f, record)));
+    patientGroup.appendChild(patientGrid);
+    editModalBody.appendChild(patientGroup);
 
     VITAL_GROUPS.forEach(({ title, items }) => {
         const group = document.createElement('div');
@@ -278,21 +333,7 @@ function buildEditForm(record) {
         const grid = document.createElement('div');
         grid.className = 'edit-grid';
 
-        items.forEach(({ key, label, unit }) => {
-            const val = record[key];
-            const inputVal = (val !== null && val !== undefined) ? formatValue(val) : '';
-
-            const field = document.createElement('div');
-            field.className = 'edit-field';
-            field.innerHTML = `
-                <span class="edit-field-label">${label}</span>
-                <div class="edit-field-row">
-                    <input class="edit-field-input" type="number" step="any"
-                           data-key="${key}" value="${inputVal}" placeholder="---">
-                    <span class="edit-field-unit">${unit}</span>
-                </div>`;
-            grid.appendChild(field);
-        });
+        items.forEach(f => grid.appendChild(buildEditField(f, record)));
 
         group.appendChild(grid);
         editModalBody.appendChild(group);
@@ -327,7 +368,7 @@ editSaveBtn.addEventListener('click', async () => {
     const updates = {};
     editModalBody.querySelectorAll('[data-key]').forEach(el => {
         const key = el.dataset.key;
-        if (el.tagName === 'TEXTAREA') {
+        if (el.tagName === 'TEXTAREA' || el.type === 'text') {
             updates[key] = el.value.trim() || null;
         } else {
             const v = el.value.trim();
@@ -347,6 +388,26 @@ editSaveBtn.addEventListener('click', async () => {
     } finally {
         editSaveBtn.disabled = false;
         editSaveBtn.textContent = '保存';
+    }
+});
+
+editDeleteBtn.addEventListener('click', async () => {
+    if (!editingRecord) return;
+    if (!confirm('この撮影記録を削除しますか？')) return;
+
+    editDeleteBtn.disabled = true;
+    editDeleteBtn.textContent = '削除中...';
+
+    try {
+        await deleteRecord(editingRecord.id);
+        recordsMap.delete(editingRecord.id);
+        editingCard.remove();
+        closeEditModal();
+    } catch (err) {
+        alert(err.message || '削除に失敗しました');
+    } finally {
+        editDeleteBtn.disabled = false;
+        editDeleteBtn.textContent = '削除';
     }
 });
 
@@ -464,6 +525,17 @@ function buildHistoryCard(record) {
             </svg>
         </button>` : '';
 
+    const patientChips = PATIENT_FIELDS
+        .filter(({ key }) => record[key] !== null && record[key] !== undefined && record[key] !== '')
+        .map(({ key, label, unit }) => {
+            const val = record[key];
+            const display = unit ? `${val} ${unit}` : String(val);
+            return `<span class="patient-chip"><span class="patient-chip-label">${label}</span>${display}</span>`;
+        }).join('');
+    const patientHtml = patientChips
+        ? `<div class="history-patient">${patientChips}</div>`
+        : '';
+
     const gridHtml = VITAL_GROUPS.map(({ title, items }) => {
         const itemsHtml = items.map(({ key, label, unit }) => {
             const val = record[key];
@@ -485,6 +557,7 @@ function buildHistoryCard(record) {
             ${badgeHtml}
             ${editBtnHtml}
         </div>
+        ${patientHtml}
         <div class="history-all-vitals">${gridHtml}</div>`;
     return card;
 }

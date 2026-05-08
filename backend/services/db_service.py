@@ -87,6 +87,25 @@ def update_record(record_id: str, vital_data: VitalData) -> bool:
         return False
 
 
+def delete_record(record_id: str) -> bool:
+    """バイタルレコードを削除する。
+
+    Returns:
+        True: 削除成功、False: 対象なし・未設定・エラー時
+    """
+    if not settings.database_url:
+        return False
+
+    try:
+        with _get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM vital_records WHERE id = %s", (record_id,))
+                return cur.rowcount > 0
+    except Exception as e:
+        logger.error("DB削除エラー: %s", e)
+        return False
+
+
 def get_records(
     limit: int = 200,
     date: Optional[str] = None,

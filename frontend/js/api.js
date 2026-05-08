@@ -28,6 +28,13 @@ async function updateRecord(id, data) {
     return json;
 }
 
+async function deleteRecord(id) {
+    const res = await fetch(`/api/records/${id}`, { method: 'DELETE' });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.detail || `削除エラー (${res.status})`);
+    return json;
+}
+
 async function analyzeImage(blob, monitorType = '') {
     const formData = new FormData();
     formData.append('file', blob, 'capture.jpg');

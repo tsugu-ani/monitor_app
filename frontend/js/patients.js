@@ -52,6 +52,9 @@ function buildPatientCard(patient) {
     const speciesLabel = patient.species ? `<span class="patient-species-tag">${patient.species}</span>` : '';
     const chartNum  = patient.chart_number != null ? `<span class="patient-meta-item">#${patient.chart_number}</span>` : '';
     const weight    = patient.body_weight  != null ? `<span class="patient-meta-item">${patient.body_weight} kg</span>` : '';
+    const createdAt = patient.created_at
+        ? `<span class="patient-meta-item">登録: ${new Date(patient.created_at).toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>`
+        : '';
     const selectedBadge = currentPatient?.id === patient.id
         ? '<span class="patient-selected-badge">選択中</span>' : '';
 
@@ -62,7 +65,7 @@ function buildPatientCard(patient) {
                 <span class="patient-card-name">${patient.name}</span>
                 ${selectedBadge}
             </div>
-            <div class="patient-card-meta">${chartNum}${weight}</div>
+            <div class="patient-card-meta">${chartNum}${weight}${createdAt}</div>
         </div>
         <div class="patient-card-actions">
             <button class="patient-select-card-btn" data-patient-id="${patient.id}" type="button">選択</button>

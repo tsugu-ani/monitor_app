@@ -21,10 +21,25 @@
         <h1>モニター情報読取</h1>
         <span id="capture-time" class="capture-time"></span>
     </div>
+    <div class="patient-row">
+        <button id="patient-selector-btn" class="patient-selector-btn" type="button">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+            </svg>
+            <span id="patient-selector-label">患者を選択</span>
+            <svg class="patient-selector-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"/>
+            </svg>
+        </button>
+    </div>
     <div class="tab-bar" role="tablist">
-        <button class="tab-btn active" data-tab="capture" role="tab" aria-selected="true">撮影</button>
-        <button class="tab-btn" data-tab="history" role="tab" aria-selected="false">撮影記録</button>
-        <button class="tab-btn" data-tab="trend"   role="tab" aria-selected="false">トレンド</button>
+        <button class="tab-btn active" data-tab="capture"  role="tab" aria-selected="true">撮影</button>
+        <button class="tab-btn" data-tab="history"  role="tab" aria-selected="false">撮影記録</button>
+        <button class="tab-btn" data-tab="trend"    role="tab" aria-selected="false">トレンド</button>
+        <button class="tab-btn" data-tab="patients" role="tab" aria-selected="false">患者管理</button>
     </div>
 </header>
 
@@ -129,6 +144,26 @@
         </div>
 
     </div>
+
+    <!-- ===== 患者管理タブ ===== -->
+    <div id="tab-patients" class="tab-panel hidden">
+
+        <div class="patients-toolbar">
+            <button id="new-patient-btn" class="new-patient-btn" type="button">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19"/>
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                新規患者登録
+            </button>
+        </div>
+
+        <div id="patients-list" class="patients-list">
+            <p class="patients-loading">読み込み中...</p>
+        </div>
+
+    </div>
 </main>
 
 
@@ -205,10 +240,55 @@
     </div>
 </div>
 
+<!-- ===== 患者選択モーダル ===== -->
+<div id="patient-select-modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="患者を選択">
+    <div class="modal-backdrop" id="patient-select-backdrop"></div>
+    <div class="modal-sheet patient-select-sheet">
+        <div class="modal-header">
+            <span class="modal-title">患者を選択</span>
+            <button id="patient-select-close" class="modal-close" type="button" aria-label="閉じる">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+            </button>
+        </div>
+        <div class="patient-select-body">
+            <button id="patient-clear-btn" class="patient-clear-btn" type="button">選択解除（全患者表示）</button>
+            <div id="patient-select-list" class="patient-select-list"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== 患者編集モーダル ===== -->
+<div id="patient-edit-modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="患者情報を編集">
+    <div class="modal-backdrop" id="patient-edit-backdrop"></div>
+    <div class="modal-sheet edit-modal-sheet">
+        <div class="modal-header edit-modal-header">
+            <span class="modal-title edit-modal-title" id="patient-edit-title">患者を登録</span>
+            <button id="patient-edit-close" class="modal-close edit-modal-close" type="button" aria-label="閉じる">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+            </button>
+        </div>
+        <div id="patient-edit-body" class="edit-modal-body"></div>
+        <div class="edit-modal-footer">
+            <button id="patient-edit-cancel" class="edit-cancel-btn" type="button">キャンセル</button>
+            <button id="patient-edit-delete" class="edit-delete-btn hidden" type="button">削除</button>
+            <button id="patient-edit-save" class="edit-save-btn" type="button">保存</button>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script src="/js/camera.js"></script>
 <script src="/js/api.js"></script>
 <script src="/js/app.js"></script>
 <script src="/js/trend.js"></script>
+<script src="/js/patients.js"></script>
 </body>
 </html>

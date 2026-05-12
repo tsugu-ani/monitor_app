@@ -101,6 +101,11 @@ function initTrendDefaults() {
 // ===== データ取得・表示 =====
 
 function applyFilter(records) {
+    // 患者選択中はその患者でフィルタ（テキストフィルタを上書き）
+    if (typeof currentPatient !== 'undefined' && currentPatient) {
+        return records.filter(r => r.patient_id === currentPatient.id);
+    }
+    // 患者未選択時のみテキストフィルタを適用
     const q = trendFilterInput.value.trim();
     if (!q) return records;
 
@@ -112,7 +117,15 @@ function applyFilter(records) {
     });
 }
 
+function updateTrendFilterVisibility() {
+    const filterCard = document.querySelector('.trend-filter-card');
+    if (!filterCard) return;
+    const hasPatient = typeof currentPatient !== 'undefined' && currentPatient;
+    filterCard.classList.toggle('hidden', hasPatient);
+}
+
 async function loadTrend() {
+    updateTrendFilterVisibility();
     const selectedItems = getSelectedItems();
     if (selectedItems.length === 0) {
         trendListEl.innerHTML = '<p class="trend-loading">項目を選択してください</p>';
@@ -125,12 +138,13 @@ async function loadTrend() {
 
     const startISO = localToISO(trendStartInput.value);
     const endISO   = localToISO(trendEndInput.value);
+    const patId    = (typeof currentPatient !== 'undefined' && currentPatient) ? currentPatient.id : '';
 
     trendListEl.innerHTML = '<p class="trend-loading">読み込み中...</p>';
     trendNoData.classList.add('hidden');
 
     try {
-        const records = await fetchRecords('', 500, startISO, endISO);
+        const records = await fetchRecords('', 500, startISO, endISO, patId);
         trendRecordsCache = records;
         renderFromCache(selectedItems);
     } catch {
@@ -323,10 +337,12 @@ document.querySelectorAll('.tab-btn[data-tab="trend"]').forEach(btn => {
 
 async function prefetchTrend() {
     initTrendDefaults();
+    updateTrendFilterVisibility();
     trendInitialized = true;
     if (!trendStartInput.value || !trendEndInput.value) return;
+    const patId = (typeof currentPatient !== 'undefined' && currentPatient) ? currentPatient.id : '';
     try {
-        const records = await fetchRecords('', 500, localToISO(trendStartInput.value), localToISO(trendEndInput.value));
+        const records = await fetchRecords('', 500, localToISO(trendStartInput.value), localToISO(trendEndInput.value), patId);
         trendRecordsCache = records;
         // タブが既に表示中なら即座に描画
         if (!document.getElementById('tab-trend').classList.contains('hidden')) {

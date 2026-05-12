@@ -35,6 +35,7 @@ class VitalRecord(VitalData):
     id: str
     recorded_at: str          # ISO 8601 形式
     monitor_type: Optional[str] = None
+    patient_id: Optional[str] = None  # patients.id への参照
 
 
 class AnalyzeResponse(BaseModel):
@@ -45,3 +46,26 @@ class AnalyzeResponse(BaseModel):
     record_saved_at: Optional[str] = None  # DB 保存時刻 (ISO 8601)
     record_id: Optional[str] = None        # DB 保存 UUID
     error: Optional[str] = None
+
+
+class PatientBase(BaseModel):
+    name: str
+    chart_number: Optional[int] = None
+    species: Optional[str] = None
+    body_weight: Optional[float] = None
+
+
+class PatientCreate(PatientBase):
+    pass
+
+
+class PatientUpdate(BaseModel):
+    name: Optional[str] = None
+    chart_number: Optional[int] = None
+    species: Optional[str] = None
+    body_weight: Optional[float] = None
+
+
+class PatientRecord(PatientBase):
+    id: str
+    created_at: str

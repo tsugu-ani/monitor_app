@@ -1,8 +1,11 @@
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 
-from models.schemas import AnalyzeResponse, VitalData, VitalRecord
+from models.schemas import AnalyzeResponse, PatientCreate, PatientRecord, PatientUpdate, VitalData, VitalRecord
 from services.claude_service import analyze_image
-from services.db_service import delete_record, get_records, save_record, update_record
+from services.db_service import (
+    create_patient, delete_patient, delete_record,
+    get_patients, get_records, save_record, update_patient, update_record,
+)
 from services.image_service import validate_and_process
 from services.monitor_skills import MONITOR_OPTIONS
 
@@ -16,13 +19,14 @@ def list_monitors():
 
 
 @router.get("/records", response_model=list[VitalRecord])
-def list_records(limit: int = 200, date: str = "", start: str = "", end: str = ""):
+def list_records(limit: int = 200, date: str = "", start: str = "", end: str = "", patient_id: str = ""):
     """撮影記録を返す。date は YYYY-MM-DD（JST）。start/end は ISO 8601 datetime（範囲指定時は ASC 順）。"""
     return get_records(
         limit=min(limit, 500),
         date=date or None,
         start=start or None,
         end=end or None,
+        patient_id=patient_id or None,
     )
 
 
@@ -30,6 +34,7 @@ def list_records(limit: int = 200, date: str = "", start: str = "", end: str = "
 async def analyze(
     file: UploadFile = File(...),
     monitor_type: str = Form(default=""),
+    patient_id: str = Form(default=""),
 ):
     image_bytes = await file.read()
     content_type = file.content_type or "image/jpeg"
@@ -45,7 +50,11 @@ async def analyze(
         raise HTTPException(status_code=500, detail=f"解析エラー: {e}")
 
     # DB 保存（失敗しても解析結果は返す）
-    saved = save_record(result.resolved_monitor_type or None, result.vital_data)
+    saved = save_record(
+        result.resolved_monitor_type or None,
+        result.vital_data,
+        patient_id=patient_id or None,
+    )
 
     return AnalyzeResponse(
         success=True,
@@ -72,4 +81,39 @@ def remove_record(record_id: str):
     ok = delete_record(record_id)
     if not ok:
         raise HTTPException(status_code=404, detail="レコードが見つかりません")
+    return {"success": True}
+
+
+# ===== 患者管理エンドポイント =====
+
+@router.get("/patients", response_model=list[PatientRecord])
+def list_patients():
+    """全患者一覧を返す。"""
+    return get_patients()
+
+
+@router.post("/patients", response_model=PatientRecord, status_code=201)
+def create_patient_endpoint(body: PatientCreate):
+    """患者を新規登録する。"""
+    result = create_patient(body.model_dump(exclude_none=False))
+    if not result:
+        raise HTTPException(status_code=500, detail="患者の登録に失敗しました")
+    return result
+
+
+@router.patch("/patients/{patient_id}", response_model=PatientRecord)
+def update_patient_endpoint(patient_id: str, body: PatientUpdate):
+    """患者情報を更新する。"""
+    result = update_patient(patient_id, body.model_dump(exclude_unset=True))
+    if not result:
+        raise HTTPException(status_code=404, detail="患者が見つかりません")
+    return result
+
+
+@router.delete("/patients/{patient_id}")
+def delete_patient_endpoint(patient_id: str):
+    """患者を削除する。"""
+    ok = delete_patient(patient_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="患者が見つかりません")
     return {"success": True}

@@ -10,12 +10,13 @@
 - **AI 自動抽出**: Claude Vision API が画面から 17 項目のバイタル値を読み取る
 - **機種自動識別**: モニター種別を選択しなくても、AI が画像から機種を自動判定して最適な読み取りルールを適用する
 - **機種別 Skill**: モニター機種を手動選択すると、その機種専用の読み取りルールが適用され精度が向上する
+- **患者管理**: 患者（名前・カルテ番号・体重・種別）をあらかじめ登録し、撮影前にヘッダーから選択できる
+- **患者別記録**: 選択した患者に自動的に撮影記録が紐付けられ、患者ごとの履歴・グラフを閲覧できる
 - **撮影記録の保存**: 撮影のたびに全項目を Supabase（PostgreSQL）に自動保存する
-- **日付別閲覧**: 撮影記録タブで日付を指定して過去の記録を確認できる
+- **日付別閲覧**: 撮影記録タブで日付を指定して過去の記録を確認できる（患者選択中はその患者の記録のみ表示）
 - **手動修正**: AI の読み取り誤りを人手で修正して DB に上書き保存できる
 - **記録の削除**: 修正モーダルの削除ボタンで記録を DB から削除できる
-- **患者情報の手入力**: カルテ番号・名前・体重を修正モーダルから手入力して記録に紐付けられる
-- **トレンド表示**: 複数の項目を同時に選択し、指定期間の時系列グラフと一覧を確認できる
+- **トレンド表示**: 8項目から複数選択して時系列グラフと一覧を確認できる。「数値表示」ボタンで各点の値を ON/OFF 切り替え可能（患者選択中はその患者のデータに絞り込まれる）
 - **読取不可の明示**: 認識できなかった項目は「---」と表示（推測値は表示しない）
 - **モバイル最適化**: スマートフォン・タブレットの縦画面に対応
 
@@ -49,14 +50,15 @@
 
 ### 画面構成
 
-ヘッダーに **「撮影」「撮影記録」「トレンド」** の 3 タブがあります。
+ヘッダーに **患者選択行** と **「撮影」「撮影記録」「トレンド」「患者管理」** の 4 タブがあります。
 
 ```
 ┌──────────────────────────────┐
 │ ≈ モニター情報読取   12:34   │
-├──────────┬──────────┬────────┤
-│   撮影   │ 撮影記録  │トレンド│
-└──────────┴──────────┴────────┘
+│ 👤 田中 太郎 ▼               │  ← 患者選択（タップで切り替え）
+├───────┬──────┬───────┬───────┤
+│ 撮影  │撮影記録│トレンド│患者管理│
+└───────┴──────┴───────┴───────┘
 ```
 
 ---
@@ -117,6 +119,10 @@
 | `›` ボタン | 翌日に移動 |
 | 日付をタップ | カレンダーから任意の日付を選択 |
 
+#### 患者選択中の挙動
+
+ヘッダーの患者選択行で患者を選択中の場合、**その患者の記録のみ**が表示されます。「選択解除」すると全患者の記録を表示します。
+
 #### 記録の手動修正・患者情報の入力
 
 各記録カード右上の **✏ ボタン** をタップすると修正モーダルが開きます。
@@ -138,11 +144,11 @@
 
 ```
 ┌──────────────────────────────┐
-│ 基本バイタル                  │  ← グループ別チップ（複数選択可）
-│ [✓心拍数] [SpO2] [EtCO2]   │  ← 選択中のチップはカラー表示
+│ [✓心拍数][✓血圧(平均)][✓呼吸数][✓体温]│  ← デフォルト選択4項目
+│ [P1(収縮期)][P2(拡張期)][SpO2][EtCO2]│  ← 追加選択可能な4項目
 │ 開始 [2026/04/30 09:15]      │  ← 日時ピッカー
 │ 終了 [2026/04/30 14:32]      │
-│ [更新]                        │
+│ [更新]              [数値表示]│  ← 数値表示ボタン
 │ ╔══════════════════════╗      │
 │ ║ ─心拍数  ─ SpO2     ║      │  ← 凡例（2項目以上選択時）
 │ ║   09:15   10:32  14:32║     │
@@ -153,12 +159,47 @@
 └──────────────────────────────┘
 ```
 
+#### 選択できる項目
+
+| 項目 | デフォルト |
+|---|---|
+| 心拍数 / 血圧（平均）/ 呼吸数 / 体温 | ✓ 選択済み |
+| P1（収縮期血圧）/ P2（拡張期血圧）/ SpO2 / EtCO2 | 非選択 |
+
 #### 使い方
 
 1. タブを開くと **今日の最初の計測時刻〜現在** がデフォルト期間として設定される
 2. 確認したい項目のチップをタップして選択する（複数同時選択可・変更と同時に自動更新）
 3. 「開始」「終了」を変更して「更新」をタップすると期間を変えられる
 4. グラフの点にタッチするとその時刻の全選択項目の値がツールチップで表示される
+5. **「数値表示」ボタン**をタップすると各データ点の値を常時表示できる（再タップで非表示）
+
+> 患者を選択中の場合、その患者のデータのみがグラフ・一覧に表示されます。
+
+---
+
+### 患者管理タブ
+
+患者情報を登録・管理します。ここで登録した患者をヘッダーから選択することで、撮影記録が自動的に患者に紐付けられます。
+
+#### 操作方法
+
+| 操作 | 手順 |
+|---|---|
+| 患者を登録 | 「＋ 新規患者登録」ボタン → フォームに入力 → 保存 |
+| 患者情報を編集 | 患者カード右端の ✏ ボタン → 修正 → 保存 |
+| 患者を削除 | ✏ ボタン → 削除ボタン（確認ダイアログあり） |
+| 患者を選択 | 患者カードの「選択」ボタン（ヘッダーにも同様の選択ボタンあり） |
+
+#### 患者情報フィールド
+
+| 項目 | 説明 |
+|---|---|
+| 名前（必須） | 患者名 |
+| カルテ番号 | 整数（ユニーク制約あり） |
+| 体重 | kg 単位 |
+| 種別 | 犬 / 猫 / その他 |
+| 登録日時 | 自動付与（患者カードに表示） |
 
 ---
 
@@ -178,10 +219,23 @@
 Supabase ダッシュボード → **SQL Editor** で以下を実行:
 
 ```sql
+-- 患者マスタ
+CREATE TABLE patients (
+    id           UUID        DEFAULT gen_random_uuid() PRIMARY KEY,
+    chart_number INTEGER     UNIQUE,
+    name         TEXT        NOT NULL,
+    species      TEXT,
+    body_weight  NUMERIC,
+    created_at   TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+CREATE INDEX idx_patients_chart_number ON patients (chart_number);
+
+-- バイタル記録
 CREATE TABLE vital_records (
     id                   UUID        DEFAULT gen_random_uuid() PRIMARY KEY,
     recorded_at          TIMESTAMPTZ DEFAULT NOW() NOT NULL,
     monitor_type         TEXT,
+    patient_id           UUID        REFERENCES patients(id),
     heart_rate           NUMERIC, bp_systolic    NUMERIC, bp_mean          NUMERIC,
     bp_diastolic         NUMERIC, respiratory_rate NUMERIC, spo2            NUMERIC,
     etco2                NUMERIC, body_temperature NUMERIC, tidal_volume    NUMERIC,
@@ -192,14 +246,22 @@ CREATE TABLE vital_records (
     notes                TEXT
 );
 CREATE INDEX idx_vital_records_recorded_at ON vital_records (recorded_at DESC);
+CREATE INDEX idx_vital_records_patient_id  ON vital_records (patient_id);
 ```
 
-> **既存テーブルへの追加**: すでにテーブルを作成済みの場合は SQL Editor で以下を実行してください。
+> **既存テーブルへの追加（患者管理機能追加時のマイグレーション）**:
 > ```sql
-> ALTER TABLE vital_records
->   ADD COLUMN chart_number INTEGER,
->   ADD COLUMN patient_name TEXT,
->   ADD COLUMN body_weight  NUMERIC;
+> CREATE TABLE patients (
+>     id           UUID        DEFAULT gen_random_uuid() PRIMARY KEY,
+>     chart_number INTEGER     UNIQUE,
+>     name         TEXT        NOT NULL,
+>     species      TEXT,
+>     body_weight  NUMERIC,
+>     created_at   TIMESTAMPTZ DEFAULT NOW() NOT NULL
+> );
+> CREATE INDEX idx_patients_chart_number ON patients (chart_number);
+> ALTER TABLE vital_records ADD COLUMN patient_id UUID REFERENCES patients(id);
+> CREATE INDEX idx_vital_records_patient_id ON vital_records (patient_id);
 > ```
 
 ### 2. アプリをセットアップする
@@ -332,22 +394,23 @@ monitor_app/
 │   ├── config.py
 │   ├── pyproject.toml
 │   ├── api/
-│   │   └── vision.py          # GET /api/monitors・POST /api/analyze・GET /api/records
+│   │   └── vision.py          # 全APIエンドポイント（monitors / analyze / records / patients）
 │   ├── services/
 │   │   ├── claude_service.py  # Claude API 呼び出し・自動識別（Haiku）
 │   │   ├── monitor_skills.py  # 機種別 Skill 定義
 │   │   ├── image_service.py   # 画像前処理・downscale
-│   │   └── db_service.py      # Supabase DB 保存・取得
+│   │   └── db_service.py      # Supabase DB（vital_records / patients 両対応）
 │   └── models/
-│       └── schemas.py         # VitalData / VitalRecord / AnalyzeResponse
+│       └── schemas.py         # VitalData / VitalRecord / AnalyzeResponse / PatientRecord 等
 ├── frontend/             # 静的 HTML/CSS/JS
 │   ├── index.html
 │   ├── css/style.css
 │   └── js/
-│       ├── app.js        # メインロジック・タブ制御・記録表示・編集モーダル
+│       ├── app.js        # メインロジック・タブ制御・患者状態管理・記録表示・編集モーダル
 │       ├── camera.js     # カメラキャプチャ処理
-│       ├── api.js        # バックエンド API 通信
-│       └── trend.js      # トレンドタブ（グラフ・一覧・期間選択）
+│       ├── api.js        # バックエンド API 通信（患者 CRUD 含む）
+│       ├── trend.js      # トレンドタブ（グラフ・一覧・期間選択）
+│       └── patients.js   # 患者管理タブ・患者選択モーダル・患者登録/編集モーダル
 ├── vercel.json
 ├── requirements.txt
 ├── start.sh              # Cloudflare Tunnel 同時起動スクリプト
@@ -363,4 +426,6 @@ monitor_app/
 - 画像認識の精度はモニターの種類・撮影角度・照明条件によって異なります
 - 機種自動識別を使用した場合は 2 回の API 呼び出しが発生します（識別 + 読み取り）
 - 機種が正しく認識されない場合はモニター種別セレクタで手動選択してください
-- `DATABASE_URL` が未設定の場合、撮影記録は保存されません（解析機能は正常に動作します）
+- `DATABASE_URL` が未設定の場合、撮影記録・患者管理は保存されません（解析機能は正常に動作します）
+- 患者を削除しても、その患者に紐付いた撮影記録は削除されません（`patient_id` が NULL になるだけです）
+- 患者の選択状態はブラウザの `localStorage` に保存されます。プライベートモードでは保持されません

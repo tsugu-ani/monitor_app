@@ -759,31 +759,6 @@ main {
     font-weight: 600;
 }
 
-.trend-filter-card {
-    background: var(--card-bg);
-    border-radius: var(--radius-sm);
-    padding: 12px 14px;
-    border: 1px solid var(--border);
-    margin-bottom: 10px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-}
-
-.trend-filter-input {
-    flex: 1;
-    font-size: 14px;
-    color: var(--text);
-    border: none;
-    border-bottom: 1px solid var(--border);
-    background: transparent;
-    outline: none;
-    padding: 3px 0;
-    font-family: inherit;
-}
-
-.trend-filter-input:focus { border-bottom-color: var(--accent); }
-
-.trend-filter-input::placeholder { color: var(--text-muted); font-size: 13px; }
-
 .trend-range-card {
     background: var(--card-bg);
     border-radius: var(--radius-sm);
@@ -834,6 +809,33 @@ main {
 }
 
 .trend-search-btn:hover { background: var(--capture-hover); }
+
+.trend-chart-header {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 4px;
+}
+
+.trend-label-toggle {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 12px;
+    border: 1.5px solid var(--border);
+    background: var(--bg);
+    color: var(--text-muted);
+    cursor: pointer;
+    font-family: inherit;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+
+.trend-label-toggle.is-on {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: #eff6ff;
+    font-weight: 700;
+}
 
 .trend-chart-wrap {
     background: var(--card-bg);
@@ -1168,6 +1170,314 @@ main {
 
 .edit-delete-btn:hover    { background: #fef2f2; }
 .edit-delete-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* ===== 患者行（ヘッダー内） ===== */
+.patient-row {
+    padding: 6px 12px 8px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+}
+
+.patient-selector-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 20px;
+    color: rgba(255,255,255,0.65);
+    font-size: 12px;
+    font-weight: 500;
+    padding: 5px 12px 5px 10px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    max-width: 100%;
+    overflow: hidden;
+    font-family: inherit;
+}
+
+.patient-selector-btn:hover  { background: rgba(255,255,255,0.14); color: rgba(255,255,255,0.85); }
+.patient-selector-btn.has-patient {
+    background: rgba(37,99,235,0.3);
+    border-color: rgba(147,197,253,0.45);
+    color: #fff;
+    font-weight: 600;
+}
+
+#patient-selector-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 200px;
+}
+
+.patient-selector-chevron { flex-shrink: 0; opacity: 0.7; }
+
+/* ===== 患者選択モーダル ===== */
+.patient-select-sheet {
+    background: var(--bg);
+    max-height: 75dvh;
+}
+
+.patient-select-sheet .modal-header {
+    background: var(--card-bg);
+    border-bottom: 1px solid var(--border);
+}
+
+.patient-select-sheet .modal-title { color: var(--text); }
+.patient-select-sheet .modal-close {
+    background: var(--bg) !important;
+    color: var(--text-muted) !important;
+}
+
+.patient-select-body {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
+    min-height: 0;
+}
+
+.patient-clear-btn {
+    width: 100%;
+    padding: 11px;
+    background: var(--bg);
+    color: var(--text-muted);
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.15s;
+}
+
+.patient-clear-btn:hover { background: var(--border); }
+
+.patient-select-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.patient-select-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 12px 14px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    text-align: left;
+    font-family: inherit;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.12s, border-color 0.12s;
+    width: 100%;
+}
+
+.patient-select-item:hover { background: #f1f5f9; }
+
+.patient-select-item.is-selected {
+    border-color: var(--accent);
+    background: #eff6ff;
+}
+
+.patient-select-item-inner { flex: 1; min-width: 0; }
+
+.patient-select-name-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 2px;
+}
+
+.patient-select-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.patient-select-sub {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+/* ===== 患者管理タブ ===== */
+.patients-toolbar {
+    margin-bottom: 12px;
+}
+
+.new-patient-btn {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    width: 100%;
+    padding: 13px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.15s;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
+    letter-spacing: 0.03em;
+}
+
+.new-patient-btn:hover { background: var(--capture-hover); }
+
+.patients-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.patients-loading,
+.patients-empty {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    padding: 20px 14px;
+    font-size: 13px;
+    color: var(--text-muted);
+    text-align: center;
+}
+
+.patient-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    transition: border-color 0.15s;
+}
+
+.patient-card.is-selected {
+    border-color: var(--accent);
+    background: #f0f7ff;
+}
+
+.patient-card-main { flex: 1; min-width: 0; }
+
+.patient-card-name-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+    flex-wrap: wrap;
+}
+
+.patient-card-name {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.patient-selected-badge {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--accent);
+    background: #dbeafe;
+    border: 1px solid #93c5fd;
+    border-radius: 4px;
+    padding: 1px 6px;
+}
+
+.patient-species-tag {
+    font-size: 10px;
+    font-weight: 600;
+    color: #374151;
+    background: #f3f4f6;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    padding: 1px 6px;
+}
+
+.patient-card-meta {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.patient-meta-item {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.patient-card-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.patient-select-card-btn {
+    padding: 7px 14px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.15s;
+    white-space: nowrap;
+}
+
+.patient-select-card-btn:hover { background: var(--capture-hover); }
+
+.patient-edit-card-btn {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--text-muted);
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.15s, color 0.15s;
+    flex-shrink: 0;
+}
+
+.patient-edit-card-btn:hover { background: var(--border); color: var(--text); }
+
+/* 患者編集モーダル内の種別セレクト */
+.patient-species-select {
+    flex: 1;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid var(--border);
+    outline: none;
+    padding: 2px 0;
+    font-family: inherit;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+    text-align: right;
+}
+
+.patient-species-select:focus { border-bottom-color: var(--accent); }
 
 /* ===== ユーティリティ ===== */
 .hidden { display: none !important; }

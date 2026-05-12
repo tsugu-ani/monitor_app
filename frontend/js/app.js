@@ -56,13 +56,50 @@ const analyzingOverlay  = document.getElementById('analyzing-overlay');
 
 const camera = new Camera(video, canvas);
 
+// ===== 患者選択状態 =====
+let currentPatient = null;
+const PATIENT_STORAGE_KEY = 'monitor_app_current_patient';
+
+function setCurrentPatient(patient) {
+    currentPatient = patient;
+    if (patient) {
+        localStorage.setItem(PATIENT_STORAGE_KEY, JSON.stringify(patient));
+    } else {
+        localStorage.removeItem(PATIENT_STORAGE_KEY);
+    }
+    renderPatientSelector();
+    loadHistory();
+}
+
+function loadCurrentPatientFromStorage() {
+    try {
+        const raw = localStorage.getItem(PATIENT_STORAGE_KEY);
+        if (raw) currentPatient = JSON.parse(raw);
+    } catch { currentPatient = null; }
+}
+
+function renderPatientSelector() {
+    const label = document.getElementById('patient-selector-label');
+    const btn   = document.getElementById('patient-selector-btn');
+    if (currentPatient) {
+        label.textContent = currentPatient.name;
+        btn.classList.add('has-patient');
+    } else {
+        label.textContent = '患者を選択';
+        btn.classList.remove('has-patient');
+    }
+}
+
 // ===== タブ切り替え =====
 const tabBtns   = document.querySelectorAll('.tab-btn');
 const tabPanels = {
-    capture: document.getElementById('tab-capture'),
-    history: document.getElementById('tab-history'),
-    trend:   document.getElementById('tab-trend'),
+    capture:  document.getElementById('tab-capture'),
+    history:  document.getElementById('tab-history'),
+    trend:    document.getElementById('tab-trend'),
+    patients: document.getElementById('tab-patients'),
 };
+
+let patientsInitialized = false;
 
 tabBtns.forEach(btn => {
     btn.addEventListener('click', () => {
@@ -74,10 +111,19 @@ tabBtns.forEach(btn => {
         Object.entries(tabPanels).forEach(([key, panel]) => {
             panel.classList.toggle('hidden', key !== tab);
         });
+        if (tab === 'patients' && !patientsInitialized) {
+            patientsInitialized = true;
+            if (typeof loadPatients === 'function') loadPatients();
+        }
     });
 });
 
+// 患者選択モーダルの開閉（patients.js のロード後に実行されるためアロー関数でラップ）
+document.getElementById('patient-selector-btn').addEventListener('click', () => openPatientSelectModal());
+
 // ===== 初期化 =====
+loadCurrentPatientFromStorage();
+renderPatientSelector();
 buildVitalGrid();
 initMonitorSelect();
 loadHistory();
@@ -172,7 +218,7 @@ shutterBtn.addEventListener('click', async () => {
     try {
         const blob = await camera.capture();
         const monitorType = monitorSelect.value || '';
-        const result = await analyzeImage(blob, monitorType);
+        const result = await analyzeImage(blob, monitorType, currentPatient?.id || '');
         closeModal();
         renderResults(result.data);
         captureTime.textContent = `最終撮影: ${new Date().toLocaleTimeString('ja-JP')}`;
@@ -183,6 +229,7 @@ shutterBtn.addEventListener('click', async () => {
                 ...result.data,
                 recorded_at: result.record_saved_at,
                 monitor_type: result.monitor_type || null,
+                patient_id: currentPatient?.id || null,
             };
             prependRecord(newRecord);
             trendPushRecord(newRecord);
@@ -453,7 +500,7 @@ historyList.addEventListener('click', e => {
 
 async function loadHistory() {
     historyList.innerHTML = '<p class="history-loading">読み込み中...</p>';
-    const records = await fetchRecords(historyDateEl.value);
+    const records = await fetchRecords(historyDateEl.value, 200, '', '', currentPatient?.id || '');
     if (!records.length) {
         historyList.innerHTML = '<p class="history-empty">この日の記録はありません</p>';
         return;

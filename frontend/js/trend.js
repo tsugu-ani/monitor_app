@@ -2,26 +2,64 @@
 
 // ===== トレンドタブ =====
 
-const trendStartInput  = document.getElementById('trend-start');
-const trendEndInput    = document.getElementById('trend-end');
-const trendSearchBtn   = document.getElementById('trend-search-btn');
-const trendNoData      = document.getElementById('trend-no-data');
-const trendListEl      = document.getElementById('trend-list');
-const trendFieldPanel  = document.getElementById('trend-field-panel');
-const trendFilterInput = document.getElementById('trend-filter');
+const trendStartInput   = document.getElementById('trend-start');
+const trendEndInput     = document.getElementById('trend-end');
+const trendSearchBtn    = document.getElementById('trend-search-btn');
+const trendNoData       = document.getElementById('trend-no-data');
+const trendListEl       = document.getElementById('trend-list');
+const trendFieldPanel   = document.getElementById('trend-field-panel');
+const trendLabelToggle  = document.getElementById('trend-label-toggle');
 
 let trendChart          = null;
 let trendInitialized    = false;
-let trendRecordsCache   = null;  // 最後に取得したレコード（フィルター再適用用）
+let trendRecordsCache   = null;
+let showDataLabels      = false;
+
+// ===== データラベルプラグイン（Chart.js 組み込み） =====
+const dataLabelsPlugin = {
+    id: 'customDataLabels',
+    afterDatasetsDraw(chart) {
+        if (!showDataLabels) return;
+        const ctx = chart.ctx;
+        chart.data.datasets.forEach((dataset, i) => {
+            const meta = chart.getDatasetMeta(i);
+            if (meta.hidden) return;
+            ctx.save();
+            ctx.font = 'bold 10px -apple-system, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            meta.data.forEach((point, j) => {
+                const value = dataset.data[j];
+                if (value === null || value === undefined) return;
+                const text = Number.isInteger(value) ? String(value) : value.toFixed(1);
+                const x = point.x;
+                const y = point.y - 5;
+                const w = ctx.measureText(text).width;
+                ctx.fillStyle = 'rgba(255,255,255,0.82)';
+                ctx.fillRect(x - w / 2 - 2, y - 12, w + 4, 13);
+                ctx.fillStyle = dataset.borderColor;
+                ctx.fillText(text, x, y);
+            });
+            ctx.restore();
+        });
+    },
+};
 
 const TREND_ITEMS = [
-    { key: 'heart_rate',       label: '心拍数',      unit: 'bpm'  },
-    { key: 'bp_mean',          label: '血圧（平均）', unit: 'mmHg' },
-    { key: 'respiratory_rate', label: '呼吸数',       unit: '回/分' },
-    { key: 'body_temperature', label: '体温',         unit: '°C'   },
+    { key: 'heart_rate',       label: '心拍数',      unit: 'bpm',   defaultOn: true  },
+    { key: 'bp_mean',          label: '血圧（平均）', unit: 'mmHg',  defaultOn: true  },
+    { key: 'respiratory_rate', label: '呼吸数',       unit: '回/分', defaultOn: true  },
+    { key: 'body_temperature', label: '体温',         unit: '°C',   defaultOn: true  },
+    { key: 'bp_systolic',      label: 'P1 (収縮期)',  unit: 'mmHg',  defaultOn: false },
+    { key: 'bp_diastolic',     label: 'P2 (拡張期)',  unit: 'mmHg',  defaultOn: false },
+    { key: 'spo2',             label: 'SpO2',         unit: '%',     defaultOn: false },
+    { key: 'etco2',            label: 'EtCO2',        unit: 'mmHg',  defaultOn: false },
 ];
 
-const CHART_COLORS = ['#2563eb', '#dc2626', '#16a34a', '#d97706'];
+const CHART_COLORS = [
+    '#2563eb', '#dc2626', '#16a34a', '#d97706',
+    '#7c3aed', '#0891b2', '#db2777', '#059669',
+];
 
 // ===== 項目チップ初期化 =====
 
@@ -57,8 +95,10 @@ function initTrendFieldChips() {
 
     trendFieldPanel.appendChild(chipRow);
 
-    // デフォルト: 全項目を選択
+    // デフォルト: defaultOn の項目のみ選択
     trendFieldPanel.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        const item = TREND_ITEMS.find(i => i.key === cb.value);
+        if (!item?.defaultOn) return;
         cb.checked = true;
         const chip = cb.closest('.trend-chip');
         chip.classList.add('is-checked');
@@ -100,18 +140,6 @@ function initTrendDefaults() {
 
 // ===== データ取得・表示 =====
 
-function applyFilter(records) {
-    const q = trendFilterInput.value.trim();
-    if (!q) return records;
-
-    const isNum = /^\d+$/.test(q);
-    return records.filter(r => {
-        if (isNum && r.chart_number != null && String(r.chart_number).includes(q)) return true;
-        if (r.patient_name && r.patient_name.toLowerCase().includes(q.toLowerCase())) return true;
-        return false;
-    });
-}
-
 async function loadTrend() {
     const selectedItems = getSelectedItems();
     if (selectedItems.length === 0) {
@@ -125,12 +153,13 @@ async function loadTrend() {
 
     const startISO = localToISO(trendStartInput.value);
     const endISO   = localToISO(trendEndInput.value);
+    const patId    = (typeof currentPatient !== 'undefined' && currentPatient) ? currentPatient.id : '';
 
     trendListEl.innerHTML = '<p class="trend-loading">読み込み中...</p>';
     trendNoData.classList.add('hidden');
 
     try {
-        const records = await fetchRecords('', 500, startISO, endISO);
+        const records = await fetchRecords('', 500, startISO, endISO, patId);
         trendRecordsCache = records;
         renderFromCache(selectedItems);
     } catch {
@@ -141,10 +170,8 @@ async function loadTrend() {
 function renderFromCache(selectedItems) {
     if (!trendRecordsCache) return;
 
-    const patientFiltered = applyFilter(trendRecordsCache);
-
     // 少なくとも1つの選択項目に値があるレコードのみ
-    const filtered = patientFiltered.filter(r =>
+    const filtered = trendRecordsCache.filter(r =>
         selectedItems.some(item => r[item.key] !== null && r[item.key] !== undefined)
     );
 
@@ -209,6 +236,7 @@ function renderTrendChart(records, selectedItems) {
     trendChart = new Chart(ctx, {
         type: 'line',
         data: { labels, datasets },
+        plugins: [dataLabelsPlugin],
         options: {
             responsive: true,
             maintainAspectRatio: false,
@@ -293,11 +321,10 @@ function renderTrendList(records, selectedItems) {
 
 trendSearchBtn.addEventListener('click', loadTrend);
 
-trendFilterInput.addEventListener('input', () => {
-    const selectedItems = getSelectedItems();
-    if (selectedItems.length > 0 && trendRecordsCache) {
-        renderFromCache(selectedItems);
-    }
+trendLabelToggle.addEventListener('click', () => {
+    showDataLabels = !showDataLabels;
+    trendLabelToggle.classList.toggle('is-on', showDataLabels);
+    if (trendChart) trendChart.update();
 });
 
 // トレンドタブが開かれたときの描画
@@ -325,8 +352,9 @@ async function prefetchTrend() {
     initTrendDefaults();
     trendInitialized = true;
     if (!trendStartInput.value || !trendEndInput.value) return;
+    const patId = (typeof currentPatient !== 'undefined' && currentPatient) ? currentPatient.id : '';
     try {
-        const records = await fetchRecords('', 500, localToISO(trendStartInput.value), localToISO(trendEndInput.value));
+        const records = await fetchRecords('', 500, localToISO(trendStartInput.value), localToISO(trendEndInput.value), patId);
         trendRecordsCache = records;
         // タブが既に表示中なら即座に描画
         if (!document.getElementById('tab-trend').classList.contains('hidden')) {

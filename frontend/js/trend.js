@@ -14,13 +14,20 @@ let trendInitialized    = false;
 let trendRecordsCache   = null;  // 最後に取得したレコード（フィルター再適用用）
 
 const TREND_ITEMS = [
-    { key: 'heart_rate',       label: '心拍数',      unit: 'bpm'  },
-    { key: 'bp_mean',          label: '血圧（平均）', unit: 'mmHg' },
-    { key: 'respiratory_rate', label: '呼吸数',       unit: '回/分' },
-    { key: 'body_temperature', label: '体温',         unit: '°C'   },
+    { key: 'heart_rate',       label: '心拍数',      unit: 'bpm',   defaultOn: true  },
+    { key: 'bp_mean',          label: '血圧（平均）', unit: 'mmHg',  defaultOn: true  },
+    { key: 'respiratory_rate', label: '呼吸数',       unit: '回/分', defaultOn: true  },
+    { key: 'body_temperature', label: '体温',         unit: '°C',   defaultOn: true  },
+    { key: 'bp_systolic',      label: 'P1 (収縮期)',  unit: 'mmHg',  defaultOn: false },
+    { key: 'bp_diastolic',     label: 'P2 (拡張期)',  unit: 'mmHg',  defaultOn: false },
+    { key: 'spo2',             label: 'SpO2',         unit: '%',     defaultOn: false },
+    { key: 'etco2',            label: 'EtCO2',        unit: 'mmHg',  defaultOn: false },
 ];
 
-const CHART_COLORS = ['#2563eb', '#dc2626', '#16a34a', '#d97706'];
+const CHART_COLORS = [
+    '#2563eb', '#dc2626', '#16a34a', '#d97706',
+    '#7c3aed', '#0891b2', '#db2777', '#059669',
+];
 
 // ===== 項目チップ初期化 =====
 
@@ -56,8 +63,10 @@ function initTrendFieldChips() {
 
     trendFieldPanel.appendChild(chipRow);
 
-    // デフォルト: 全項目を選択
+    // デフォルト: defaultOn の項目のみ選択
     trendFieldPanel.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        const item = TREND_ITEMS.find(i => i.key === cb.value);
+        if (!item?.defaultOn) return;
         cb.checked = true;
         const chip = cb.closest('.trend-chip');
         chip.classList.add('is-checked');

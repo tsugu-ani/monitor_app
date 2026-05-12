@@ -8,7 +8,6 @@ const trendSearchBtn   = document.getElementById('trend-search-btn');
 const trendNoData      = document.getElementById('trend-no-data');
 const trendListEl      = document.getElementById('trend-list');
 const trendFieldPanel  = document.getElementById('trend-field-panel');
-const trendFilterInput = document.getElementById('trend-filter');
 
 let trendChart          = null;
 let trendInitialized    = false;
@@ -100,32 +99,7 @@ function initTrendDefaults() {
 
 // ===== データ取得・表示 =====
 
-function applyFilter(records) {
-    // 患者選択中はその患者でフィルタ（テキストフィルタを上書き）
-    if (typeof currentPatient !== 'undefined' && currentPatient) {
-        return records.filter(r => r.patient_id === currentPatient.id);
-    }
-    // 患者未選択時のみテキストフィルタを適用
-    const q = trendFilterInput.value.trim();
-    if (!q) return records;
-
-    const isNum = /^\d+$/.test(q);
-    return records.filter(r => {
-        if (isNum && r.chart_number != null && String(r.chart_number).includes(q)) return true;
-        if (r.patient_name && r.patient_name.toLowerCase().includes(q.toLowerCase())) return true;
-        return false;
-    });
-}
-
-function updateTrendFilterVisibility() {
-    const filterCard = document.querySelector('.trend-filter-card');
-    if (!filterCard) return;
-    const hasPatient = typeof currentPatient !== 'undefined' && currentPatient;
-    filterCard.classList.toggle('hidden', hasPatient);
-}
-
 async function loadTrend() {
-    updateTrendFilterVisibility();
     const selectedItems = getSelectedItems();
     if (selectedItems.length === 0) {
         trendListEl.innerHTML = '<p class="trend-loading">項目を選択してください</p>';
@@ -155,10 +129,8 @@ async function loadTrend() {
 function renderFromCache(selectedItems) {
     if (!trendRecordsCache) return;
 
-    const patientFiltered = applyFilter(trendRecordsCache);
-
     // 少なくとも1つの選択項目に値があるレコードのみ
-    const filtered = patientFiltered.filter(r =>
+    const filtered = trendRecordsCache.filter(r =>
         selectedItems.some(item => r[item.key] !== null && r[item.key] !== undefined)
     );
 
@@ -307,13 +279,6 @@ function renderTrendList(records, selectedItems) {
 
 trendSearchBtn.addEventListener('click', loadTrend);
 
-trendFilterInput.addEventListener('input', () => {
-    const selectedItems = getSelectedItems();
-    if (selectedItems.length > 0 && trendRecordsCache) {
-        renderFromCache(selectedItems);
-    }
-});
-
 // トレンドタブが開かれたときの描画
 document.querySelectorAll('.tab-btn[data-tab="trend"]').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -337,7 +302,6 @@ document.querySelectorAll('.tab-btn[data-tab="trend"]').forEach(btn => {
 
 async function prefetchTrend() {
     initTrendDefaults();
-    updateTrendFilterVisibility();
     trendInitialized = true;
     if (!trendStartInput.value || !trendEndInput.value) return;
     const patId = (typeof currentPatient !== 'undefined' && currentPatient) ? currentPatient.id : '';

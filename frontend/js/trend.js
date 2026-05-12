@@ -2,16 +2,48 @@
 
 // ===== トレンドタブ =====
 
-const trendStartInput  = document.getElementById('trend-start');
-const trendEndInput    = document.getElementById('trend-end');
-const trendSearchBtn   = document.getElementById('trend-search-btn');
-const trendNoData      = document.getElementById('trend-no-data');
-const trendListEl      = document.getElementById('trend-list');
-const trendFieldPanel  = document.getElementById('trend-field-panel');
+const trendStartInput   = document.getElementById('trend-start');
+const trendEndInput     = document.getElementById('trend-end');
+const trendSearchBtn    = document.getElementById('trend-search-btn');
+const trendNoData       = document.getElementById('trend-no-data');
+const trendListEl       = document.getElementById('trend-list');
+const trendFieldPanel   = document.getElementById('trend-field-panel');
+const trendLabelToggle  = document.getElementById('trend-label-toggle');
 
 let trendChart          = null;
 let trendInitialized    = false;
-let trendRecordsCache   = null;  // 最後に取得したレコード（フィルター再適用用）
+let trendRecordsCache   = null;
+let showDataLabels      = false;
+
+// ===== データラベルプラグイン（Chart.js 組み込み） =====
+const dataLabelsPlugin = {
+    id: 'customDataLabels',
+    afterDatasetsDraw(chart) {
+        if (!showDataLabels) return;
+        const ctx = chart.ctx;
+        chart.data.datasets.forEach((dataset, i) => {
+            const meta = chart.getDatasetMeta(i);
+            if (meta.hidden) return;
+            ctx.save();
+            ctx.font = 'bold 10px -apple-system, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            meta.data.forEach((point, j) => {
+                const value = dataset.data[j];
+                if (value === null || value === undefined) return;
+                const text = Number.isInteger(value) ? String(value) : value.toFixed(1);
+                const x = point.x;
+                const y = point.y - 5;
+                const w = ctx.measureText(text).width;
+                ctx.fillStyle = 'rgba(255,255,255,0.82)';
+                ctx.fillRect(x - w / 2 - 2, y - 12, w + 4, 13);
+                ctx.fillStyle = dataset.borderColor;
+                ctx.fillText(text, x, y);
+            });
+            ctx.restore();
+        });
+    },
+};
 
 const TREND_ITEMS = [
     { key: 'heart_rate',       label: '心拍数',      unit: 'bpm',   defaultOn: true  },
@@ -204,6 +236,7 @@ function renderTrendChart(records, selectedItems) {
     trendChart = new Chart(ctx, {
         type: 'line',
         data: { labels, datasets },
+        plugins: [dataLabelsPlugin],
         options: {
             responsive: true,
             maintainAspectRatio: false,
@@ -287,6 +320,12 @@ function renderTrendList(records, selectedItems) {
 // ===== イベントリスナー =====
 
 trendSearchBtn.addEventListener('click', loadTrend);
+
+trendLabelToggle.addEventListener('click', () => {
+    showDataLabels = !showDataLabels;
+    trendLabelToggle.classList.toggle('is-on', showDataLabels);
+    if (trendChart) trendChart.update();
+});
 
 // トレンドタブが開かれたときの描画
 document.querySelectorAll('.tab-btn[data-tab="trend"]').forEach(btn => {

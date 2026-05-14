@@ -69,8 +69,17 @@ def save_record(
         return None
 
 
-def update_record(record_id: str, vital_data: VitalData) -> bool:
+def update_record(
+    record_id: str,
+    vital_data: VitalData,
+    patient_id: Optional[str] = None,
+) -> bool:
     """バイタルレコードを更新する。
+
+    Args:
+        record_id:  更新対象レコードの UUID
+        vital_data: 全 VitalData フィールドを上書きする値
+        patient_id: 紐付け患者 UUID（None で紐付け解除）
 
     Returns:
         True: 更新成功、False: 対象なし・未設定・エラー時
@@ -80,13 +89,13 @@ def update_record(record_id: str, vital_data: VitalData) -> bool:
 
     data = vital_data.model_dump()
     values = [data[f] for f in _VITAL_FIELDS]
-    set_str = ", ".join([f"{f} = %s" for f in _VITAL_FIELDS])
+    set_str = ", ".join([f"{f} = %s" for f in _VITAL_FIELDS] + ["patient_id = %s"])
     sql = f"UPDATE vital_records SET {set_str} WHERE id = %s"
 
     try:
         with _get_conn() as conn:
             with conn.cursor() as cur:
-                cur.execute(sql, values + [record_id])
+                cur.execute(sql, values + [patient_id or None, record_id])
                 return cur.rowcount > 0
     except Exception as e:
         logger.error("DB更新エラー: %s", e)

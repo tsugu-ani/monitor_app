@@ -38,6 +38,11 @@ class VitalRecord(VitalData):
     patient_id: Optional[str] = None  # patients.id への参照
 
 
+class VitalDataUpdate(VitalData):
+    """PATCH /api/records/{id} 用。VitalData + 患者紐付け（patient_id）の更新を許可する。"""
+    patient_id: Optional[str] = None
+
+
 class AnalyzeResponse(BaseModel):
     success: bool
     data: Optional[VitalData] = None

@@ -1,6 +1,9 @@
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 
-from models.schemas import AnalyzeResponse, PatientCreate, PatientRecord, PatientUpdate, VitalData, VitalRecord
+from models.schemas import (
+    AnalyzeResponse, PatientCreate, PatientRecord, PatientUpdate,
+    VitalData, VitalDataUpdate, VitalRecord,
+)
 from services.claude_service import analyze_image
 from services.db_service import (
     create_patient, delete_patient, delete_record,
@@ -67,9 +70,10 @@ async def analyze(
 
 
 @router.patch("/records/{record_id}")
-def patch_record(record_id: str, body: VitalData):
-    """撮影記録のバイタル値を手動修正する。"""
-    ok = update_record(record_id, body)
+def patch_record(record_id: str, body: VitalDataUpdate):
+    """撮影記録のバイタル値・患者紐付けを手動修正する。"""
+    vital_data = VitalData(**body.model_dump(exclude={"patient_id"}))
+    ok = update_record(record_id, vital_data, patient_id=body.patient_id)
     if not ok:
         raise HTTPException(status_code=404, detail="レコードが見つかりません")
     return {"success": True}

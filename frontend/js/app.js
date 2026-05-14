@@ -298,12 +298,15 @@ const editCancelBtn     = document.getElementById('edit-cancel-btn');
 
 let editingRecord = null;
 let editingCard   = null;
+let editPatientsCache = []; // 編集モーダルの患者紐付け select に使用
 
 const recordsMap = new Map(); // id -> record
 
-function openEditModal(record, card) {
+async function openEditModal(record, card) {
     editingRecord = { ...record };
     editingCard   = card;
+    // 患者リストを最新化（紐付け select に反映）
+    try { editPatientsCache = await fetchPatients(); } catch { editPatientsCache = []; }
     buildEditForm(record);
     editModal.classList.remove('hidden');
     document.body.style.overflow = 'hidden';
@@ -319,6 +322,56 @@ function closeEditModal() {
 editModalClose.addEventListener('click', closeEditModal);
 editModalBackdrop.addEventListener('click', closeEditModal);
 editCancelBtn.addEventListener('click', closeEditModal);
+
+function buildPatientLinkField(record) {
+    const field = document.createElement('div');
+    field.className = 'edit-field';
+
+    const labelEl = document.createElement('span');
+    labelEl.className = 'edit-field-label';
+    labelEl.textContent = '患者';
+
+    const rowEl = document.createElement('div');
+    rowEl.className = 'edit-field-row';
+
+    const select = document.createElement('select');
+    select.className = 'edit-field-input patient-link-select';
+    select.dataset.key = 'patient_id';
+
+    const emptyOpt = document.createElement('option');
+    emptyOpt.value = '';
+    emptyOpt.textContent = '（紐付けなし）';
+    select.appendChild(emptyOpt);
+
+    editPatientsCache.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        const meta = [];
+        if (p.chart_number != null) meta.push(`#${p.chart_number}`);
+        if (p.species) meta.push(p.species);
+        opt.textContent = meta.length ? `${p.name}（${meta.join(' ')}）` : p.name;
+        if (record.patient_id === p.id) opt.selected = true;
+        select.appendChild(opt);
+    });
+
+    // 患者を選択したら、手入力の患者情報フィールドへ値を反映する
+    select.addEventListener('change', () => {
+        const patient = editPatientsCache.find(p => p.id === select.value);
+        if (!patient) return;
+        const mapping = { chart_number: 'chart_number', patient_name: 'name', body_weight: 'body_weight' };
+        PATIENT_FIELDS.forEach(({ key }) => {
+            const input = editModalBody.querySelector(`input[data-key="${key}"]`);
+            if (!input) return;
+            const val = patient[mapping[key]];
+            input.value = (val !== null && val !== undefined) ? String(val) : '';
+        });
+    });
+
+    rowEl.appendChild(select);
+    field.appendChild(labelEl);
+    field.appendChild(rowEl);
+    return field;
+}
 
 function buildEditField({ key, label, unit, inputType = 'number', step = 'any' }, record) {
     const val = record[key];
@@ -366,6 +419,7 @@ function buildEditForm(record) {
     patientGroup.appendChild(patientTitle);
     const patientGrid = document.createElement('div');
     patientGrid.className = 'edit-grid';
+    patientGrid.appendChild(buildPatientLinkField(record));
     PATIENT_FIELDS.forEach(f => patientGrid.appendChild(buildEditField(f, record)));
     patientGroup.appendChild(patientGrid);
     editModalBody.appendChild(patientGroup);
@@ -417,7 +471,9 @@ editSaveBtn.addEventListener('click', async () => {
     const updates = {};
     editModalBody.querySelectorAll('[data-key]').forEach(el => {
         const key = el.dataset.key;
-        if (el.tagName === 'TEXTAREA' || el.type === 'text') {
+        if (el.tagName === 'SELECT') {
+            updates[key] = el.value || null;
+        } else if (el.tagName === 'TEXTAREA' || el.type === 'text') {
             updates[key] = el.value.trim() || null;
         } else {
             const v = el.value.trim();

@@ -37,7 +37,19 @@
       "Bash(sudo apt-get *)",
       "Bash(uv add *)",
       "Bash(git restore *)",
-      "Bash(ls -lh image/*.pdf)"
+      "Bash(ls -lh image/*.pdf)",
+      "Bash(curl -s http://localhost:8000/api/records)",
+      "Bash(curl -s http://localhost:8001/api/records)",
+      "Bash(curl -s --noproxy '*' http://localhost:8001/api/records)",
+      "Bash(ssh-keygen *)",
+      "Bash(git remote *)",
+      "Bash(chmod 600 ~/.ssh/monitor_app_deploy)",
+      "Bash(chmod 644 ~/.ssh/monitor_app_deploy.pub)",
+      "Bash(git commit *)",
+      "Bash(git checkout *)",
+      "Bash(git pull *)",
+      "Bash(git branch *)",
+      "Bash(git reset *)"
     ]
   }
 }

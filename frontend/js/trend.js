@@ -7,6 +7,7 @@ const trendEndInput     = document.getElementById('trend-end');
 const trendSearchBtn    = document.getElementById('trend-search-btn');
 const trendNoData       = document.getElementById('trend-no-data');
 const trendListEl       = document.getElementById('trend-list');
+const trendListUnitsEl  = document.getElementById('trend-list-units');
 const trendFieldPanel   = document.getElementById('trend-field-panel');
 const trendLabelToggle  = document.getElementById('trend-label-toggle');
 
@@ -50,8 +51,8 @@ const TREND_ITEMS = [
     { key: 'bp_mean',          label: '血圧（平均）', unit: 'mmHg',  defaultOn: true  },
     { key: 'respiratory_rate', label: '呼吸数',       unit: '回/分', defaultOn: true  },
     { key: 'body_temperature', label: '体温',         unit: '°C',   defaultOn: true  },
-    { key: 'bp_systolic',      label: 'P1 (収縮期)',  unit: 'mmHg',  defaultOn: false },
-    { key: 'bp_diastolic',     label: 'P2 (拡張期)',  unit: 'mmHg',  defaultOn: false },
+    { key: 'bp_systolic',      label: 'P1 (観血測定平均)', unit: 'mmHg', defaultOn: false },
+    { key: 'bp_diastolic',     label: 'P2 (観血測定平均)', unit: 'mmHg', defaultOn: false },
     { key: 'spo2',             label: 'SpO2',         unit: '%',     defaultOn: false },
     { key: 'etco2',            label: 'EtCO2',        unit: 'mmHg',  defaultOn: false },
 ];
@@ -144,6 +145,7 @@ async function loadTrend() {
     const selectedItems = getSelectedItems();
     if (selectedItems.length === 0) {
         trendListEl.innerHTML = '<p class="trend-loading">項目を選択してください</p>';
+        trendListUnitsEl.innerHTML = '';
         trendNoData.classList.add('hidden');
         clearChart();
         return;
@@ -177,6 +179,7 @@ function renderFromCache(selectedItems) {
 
     if (filtered.length === 0) {
         trendListEl.innerHTML = '';
+        trendListUnitsEl.innerHTML = '';
         trendNoData.classList.remove('hidden');
         clearChart();
         return;
@@ -279,12 +282,17 @@ function renderTrendList(records, selectedItems) {
     const isSingle = selectedItems.length === 1;
     const singleItem = selectedItems[0];
 
+    // ヘッダーに単位サマリーを表示
+    trendListUnitsEl.innerHTML = selectedItems.map(si =>
+        `<span class="trend-list-unit-tag">
+            <span class="trend-list-unit-dot" style="background:${si.color}"></span>
+            ${si.label} (${si.unit})
+        </span>`
+    ).join('');
+
     [...records].reverse().forEach(r => {
-        const dt      = new Date(r.recorded_at);
-        const timeStr = dt.toLocaleString('ja-JP', {
-            month: '2-digit', day: '2-digit',
-            hour: '2-digit', minute: '2-digit',
-        });
+        const dt = new Date(r.recorded_at);
+        const timeStr = dt.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
 
         const el = document.createElement('div');
 
@@ -294,8 +302,7 @@ function renderTrendList(records, selectedItems) {
             el.className = 'trend-list-item';
             el.innerHTML = `
                 <span class="trend-list-time">${timeStr}</span>
-                <span class="trend-list-value" style="color:${singleItem.color}">${formatValue(val)}</span>
-                <span class="trend-list-unit">${singleItem.unit}</span>`;
+                <span class="trend-list-value" style="color:${singleItem.color}">${formatValue(val)}</span>`;
         } else {
             el.className = 'trend-list-item-multi';
             const valParts = selectedItems.map(si => {
@@ -304,7 +311,6 @@ function renderTrendList(records, selectedItems) {
                 return `<span class="trend-list-multi-val">
                     <span class="trend-list-multi-label" style="color:${si.color}">${si.label}</span>
                     <span class="trend-list-multi-num">${formatValue(v)}</span>
-                    <span class="trend-list-multi-unit">${si.unit}</span>
                 </span>`;
             }).filter(Boolean).join('');
             if (!valParts) return;

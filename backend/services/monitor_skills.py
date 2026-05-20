@@ -11,16 +11,29 @@ _COMMON_CAUTIONS = """
 ■ 特に混同しやすい項目（必ず守ること）
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-【1. 血圧：NIBP（非観血）と ART/P1/P2（観血）の区別】
-血圧には2種類の計測方法があり、モニターに両方表示されることがある。
-- 非観血血圧（NIBP または BP）：カフで測定。間欠的に更新される。
-- 観血血圧（ART、P1、P2）：動脈ラインで測定。リアルタイム更新。
+【1. 血圧フィールドの定義（重要）】
+血圧フィールドは次の意味で使用すること（従来の SYS/DIA 表記とは異なるので注意）:
+- bp_systolic: 観血圧 P1 チャンネルの MAP（平均圧）値 [mmHg]
+- bp_diastolic: 観血圧 P2 チャンネルの MAP（平均圧）値 [mmHg]
+- bp_mean: 単一血圧チャンネル（NIBP / ART / IBP単独）の MAP（平均圧）値 [mmHg]
 
-読み取り時のルール：
-- 画面に ART（観血血圧）が表示されている場合 → ART の値を優先して使用する
-- ART が表示されていない場合 → NIBP/BP の値を使用する
-- いずれも「---」「-?-」等の未測定表示の場合 → null
-- 必ず notes フィールドに「血圧: ART使用」または「血圧: NIBP使用」と記録すること
+血圧の種類:
+- 非観血血圧（NIBP または BP）：カフで測定。間欠的に更新される。
+- 観血血圧（ART、P1、P2、IBP）：動脈ラインで測定。リアルタイム更新。
+
+読み取り時のルール:
+- P1 と P2 の両チャンネルが表示されている場合:
+  → bp_systolic = P1 の MAP 値、bp_diastolic = P2 の MAP 値
+  → bp_mean には NIBP の MAP 値（同時表示時）または null
+- 単一の観血圧（ART, IBP 単独）のみ表示の場合:
+  → bp_mean = その MAP 値
+  → bp_systolic と bp_diastolic は null
+- NIBP のみ表示の場合:
+  → bp_mean = NIBP の MAP 値
+  → bp_systolic と bp_diastolic は null
+- SYS / DIA（収縮期 / 拡張期）の値はこれらのフィールドには **記録しない**（MAP のみ使用）
+- 「---」「-?-」等の未測定表示は → null
+- notes に使用した血圧種別を明記する（例:「血圧: P1/P2 観血」「血圧: ART」「血圧: NIBP」）
 
 【2. ISOダイヤル と ISO In/Et は別物】
 - iso_dial（ISOダイヤル）
@@ -89,14 +102,28 @@ MONITOR_SKILLS: dict[str, dict] = {
 - ラベル「SpO₂」の数値 [%]
 - 黄または橙色の大きな数字。直下に小数値（PI: 灌流指数）が表示される場合があるが spo2 ではない
 
-【blood pressure（血圧3値）】
-- 観血圧（ART, P1, P2）が表示されている場合 → その値を優先して使用する
-  - bp_systolic：収縮期値 [mmHg]
-  - bp_mean：平均圧値 [mmHg]
-  - bp_diastolic：拡張期値 [mmHg]
-- 観血圧がない場合 → ラベル「BP」の SYS / MAP / DIA を使用する
+【blood pressure（血圧）】
+重要：このモニターでは血圧フィールドに **MAP（平均圧）のみ** を記録する。
+SYS（収縮期）/ DIA（拡張期）の値はフィールドに含めないこと。
+
+P1 / P2 チャンネルの読み取り方:
+- 各観血圧チャンネル（P1, P2）は画面上で3つの数値（SYS / DIA / MAP）を表示する
+- レイアウトは典型的に：上段に SYS / DIA、下段（中央）に MAP（平均圧）
+- 「真ん中で一番下」に表示される MAP（平均圧）の値のみを取得する
+
+フィールドへのマッピング:
+- P1 と P2 が両方表示されている場合:
+  - bp_systolic：P1 チャンネルの MAP 値 [mmHg]
+  - bp_diastolic：P2 チャンネルの MAP 値 [mmHg]
+  - bp_mean：NIBP が同時表示されている場合は NIBP の MAP 値、なければ null
+- 観血圧が単一チャンネル（ART / IBP 単独）の場合:
+  - bp_mean：その MAP 値 [mmHg]
+  - bp_systolic と bp_diastolic は null
+- 観血圧がなく、ラベル「BP」（NIBP）のみの場合:
+  - bp_mean：「BP」の MAP 値
+  - bp_systolic と bp_diastolic は null
 - 「---」「?」表示は未測定 → null
-- notes に「血圧: ART使用」または「血圧: NIBP使用」と記録すること
+- notes に使用した種別を記録（例:「血圧: P1/P2 観血」「血圧: ART」「血圧: NIBP」）
 
 【etco2（EtCO2）】
 - ラベル「CO₂」の欄に「In」（吸気）と「ET」または「Et」（呼気）の2値が分離表示される
@@ -130,8 +157,8 @@ MONITOR_SKILLS: dict[str, dict] = {
 - °F 表示の場合は °C に換算：(°F - 32) × 5/9
 
 ■ 最下部サマリーバーの補足
-- 「NNN/NNN」形式 → 血圧 収縮期/拡張期
-- 続く2〜3桁の数値 → 平均血圧
+- 「NNN/NNN」形式 → 血圧の SYS/DIA（このフィールドには記録しない）
+- 続く2〜3桁の数値 → 平均血圧（MAP）。bp_mean または bp_systolic / bp_diastolic に記録
 - 小数を含む数値（例: 38.3）→ 体温 [°C]
 - 2桁の整数 → SpO2 [%]
 - 「N.N/N.N」形式（例: 1.8/1.3）→ ISO In/Ex（吸気/呼気濃度 [%]）
@@ -173,11 +200,13 @@ MONITOR_SKILLS: dict[str, dict] = {
 - ラベル「SpO₂」の数値 [%]（シアンまたは黄色の大きな数字）
 - 直下の小数値（例: 0.3）は PI（灌流指数 / Perfusion Index）であり spo2 ではない
 
-【blood pressure（血圧3値）】
-- 表示形式：「SYS/DIA (MEAN)」 例：「125/101 (109)」
-  - bp_systolic：スラッシュ前の値（例: 125）[mmHg]
-  - bp_diastolic：スラッシュ後・括弧前の値（例: 101）[mmHg]
-  - bp_mean：括弧 ( ) 内の値（例: 109）[mmHg]
+【blood pressure（血圧）】
+重要：このモニターでは血圧フィールドに **MAP（平均圧）のみ** を記録する。
+Vista 300 は ART または NIBP の単一血圧チャンネルを表示する（P1/P2 の分離はない）。
+
+- 表示形式：「SYS/DIA (MEAN)」 例：「125/101 (109)」 → 括弧内の MEAN 値のみ使用
+- bp_mean：括弧 ( ) 内の MEAN 値（例: 109）[mmHg]
+- bp_systolic, bp_diastolic：null（P1/P2 観血チャンネルは Vista 300 にはない）
 - ART（観血的動脈圧 / IBP）と NIBP（非観血的血圧）の両方が表示されている場合は ART を優先
 - 「-?-/-?-」「---/---」表示は未測定 → null
 - notes に「血圧: ART使用」または「血圧: NIBP使用」と記録すること

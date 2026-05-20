@@ -6,9 +6,9 @@ const VITAL_GROUPS = [
         title: '基本バイタル',
         items: [
             { key: 'heart_rate',       label: '心拍数',        unit: 'bpm'    },
-            { key: 'bp_systolic',      label: '血圧（収縮期）', unit: 'mmHg'  },
-            { key: 'bp_mean',          label: '血圧（平均）',   unit: 'mmHg'  },
-            { key: 'bp_diastolic',     label: '血圧（拡張期）', unit: 'mmHg'  },
+            { key: 'bp_systolic',      label: 'P1（観血測定平均）', unit: 'mmHg' },
+            { key: 'bp_mean',          label: '血圧（平均）',       unit: 'mmHg' },
+            { key: 'bp_diastolic',     label: 'P2（観血測定平均）', unit: 'mmHg' },
             { key: 'respiratory_rate', label: '呼吸数',        unit: '回/分'  },
             { key: 'spo2',             label: 'SpO2',          unit: '%'      },
             { key: 'etco2',            label: 'EtCO2',         unit: 'mmHg'  },
@@ -211,9 +211,16 @@ modalClose.addEventListener('click', closeModal);
 modalBackdrop.addEventListener('click', closeModal);
 
 // ===== 撮影・解析 =====
+// 解析中（API応答待ち）にリロード／タブクローズしようとした場合の警告
+function beforeUnloadGuard(e) {
+    e.preventDefault();
+    e.returnValue = '';
+}
+
 shutterBtn.addEventListener('click', async () => {
     shutterBtn.disabled = true;
     analyzingOverlay.classList.remove('hidden');
+    window.addEventListener('beforeunload', beforeUnloadGuard);
 
     try {
         const blob = await camera.capture();
@@ -233,12 +240,15 @@ shutterBtn.addEventListener('click', async () => {
             };
             prependRecord(newRecord);
             trendPushRecord(newRecord);
+        } else {
+            showError('解析結果を画面に表示しましたが、DB への保存に失敗しました。サーバーログを確認してください。');
         }
     } catch (err) {
         closeModal();
         showError(err.message || '解析中にエラーが発生しました');
+    } finally {
+        window.removeEventListener('beforeunload', beforeUnloadGuard);
     }
-    // finally は不要（closeModal 後はモーダルが非表示のため）
 });
 
 // ===== 結果レンダリング =====

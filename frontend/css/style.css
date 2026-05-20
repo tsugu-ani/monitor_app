@@ -871,6 +871,35 @@ main {
     padding: 9px 14px;
     background: var(--bg);
     border-bottom: 1px solid var(--border);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 12px;
+}
+
+.trend-list-units {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 10px;
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 500;
+    color: var(--text);
+}
+
+.trend-list-unit-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+}
+
+.trend-list-unit-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
 }
 
 .trend-list {

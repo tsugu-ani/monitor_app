@@ -88,15 +88,18 @@
         <!-- 項目選択（チップ） -->
         <div id="trend-field-panel" class="trend-field-panel"></div>
 
-        <!-- 期間選択 -->
+        <!-- 期間選択：日付 + 時間範囲 -->
         <div class="trend-range-card">
-            <div class="trend-range-row">
-                <span class="trend-ctrl-label">開始</span>
-                <input type="datetime-local" id="trend-start" class="trend-datetime-input">
+            <div class="trend-date-row">
+                <button id="trend-date-prev" class="date-nav-btn" type="button" aria-label="前の日">&#8249;</button>
+                <input type="date" id="trend-date" class="trend-date-input">
+                <button id="trend-date-next" class="date-nav-btn" type="button" aria-label="次の日">&#8250;</button>
             </div>
-            <div class="trend-range-row">
-                <span class="trend-ctrl-label">終了</span>
-                <input type="datetime-local" id="trend-end" class="trend-datetime-input">
+            <div class="trend-time-row">
+                <span class="trend-ctrl-label">時間</span>
+                <input type="time" id="trend-start-time" class="trend-time-input">
+                <span class="trend-time-sep">〜</span>
+                <input type="time" id="trend-end-time" class="trend-time-input">
             </div>
             <button id="trend-search-btn" class="trend-search-btn" type="button">更新</button>
         </div>
@@ -112,10 +115,6 @@
 
         <!-- 一覧 -->
         <div class="trend-list-section">
-            <div class="trend-list-header">
-                <span>記録一覧</span>
-                <span id="trend-list-units" class="trend-list-units"></span>
-            </div>
             <div id="trend-list" class="trend-list">
                 <p class="trend-loading">項目を選択してください</p>
             </div>

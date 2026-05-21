@@ -2,12 +2,14 @@
 
 // ===== トレンドタブ =====
 
-const trendStartInput   = document.getElementById('trend-start');
-const trendEndInput     = document.getElementById('trend-end');
+const trendDateInput    = document.getElementById('trend-date');
+const trendDatePrevBtn  = document.getElementById('trend-date-prev');
+const trendDateNextBtn  = document.getElementById('trend-date-next');
+const trendStartTimeEl  = document.getElementById('trend-start-time');
+const trendEndTimeEl    = document.getElementById('trend-end-time');
 const trendSearchBtn    = document.getElementById('trend-search-btn');
 const trendNoData       = document.getElementById('trend-no-data');
 const trendListEl       = document.getElementById('trend-list');
-const trendListUnitsEl  = document.getElementById('trend-list-units');
 const trendFieldPanel   = document.getElementById('trend-field-panel');
 const trendLabelToggle  = document.getElementById('trend-label-toggle');
 
@@ -118,25 +120,37 @@ function getSelectedItems() {
 
 // ===== 日時ユーティリティ =====
 
-function setDatetimeInput(input, date) {
-    const pad = n => String(n).padStart(2, '0');
-    input.value = `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+const pad2 = n => String(n).padStart(2, '0');
+
+function dateToYMD(d) {
+    return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
 }
 
-function localToISO(datetimeLocalStr) {
-    if (!datetimeLocalStr) return '';
-    return new Date(datetimeLocalStr).toISOString();
+function dateToHM(d) {
+    return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+
+// 日付（YYYY-MM-DD）と時刻（HH:MM）を ISO 文字列へ
+function dateTimeToISO(dateStr, timeStr) {
+    if (!dateStr || !timeStr) return '';
+    return new Date(`${dateStr}T${timeStr}:00`).toISOString();
 }
 
 // ===== デフォルト期間設定 =====
 
 function initTrendDefaults() {
     const now = new Date();
-    setDatetimeInput(trendEndInput, now);
+    trendDateInput.value    = dateToYMD(now);
+    trendStartTimeEl.value  = '00:00';
+    trendEndTimeEl.value    = dateToHM(now);
+}
 
-    const startOfDay = new Date(now);
-    startOfDay.setHours(0, 0, 0, 0);
-    setDatetimeInput(trendStartInput, startOfDay);
+// 前日・翌日ボタン
+function shiftTrendDate(delta) {
+    const d = new Date(trendDateInput.value);
+    d.setDate(d.getDate() + delta);
+    trendDateInput.value = dateToYMD(d);
+    loadTrend();
 }
 
 // ===== データ取得・表示 =====
@@ -145,16 +159,15 @@ async function loadTrend() {
     const selectedItems = getSelectedItems();
     if (selectedItems.length === 0) {
         trendListEl.innerHTML = '<p class="trend-loading">項目を選択してください</p>';
-        trendListUnitsEl.innerHTML = '';
         trendNoData.classList.add('hidden');
         clearChart();
         return;
     }
 
-    if (!trendStartInput.value || !trendEndInput.value) return;
+    if (!trendDateInput.value || !trendStartTimeEl.value || !trendEndTimeEl.value) return;
 
-    const startISO = localToISO(trendStartInput.value);
-    const endISO   = localToISO(trendEndInput.value);
+    const startISO = dateTimeToISO(trendDateInput.value, trendStartTimeEl.value);
+    const endISO   = dateTimeToISO(trendDateInput.value, trendEndTimeEl.value);
     const patId    = (typeof currentPatient !== 'undefined' && currentPatient) ? currentPatient.id : '';
 
     trendListEl.innerHTML = '<p class="trend-loading">読み込み中...</p>';
@@ -179,7 +192,6 @@ function renderFromCache(selectedItems) {
 
     if (filtered.length === 0) {
         trendListEl.innerHTML = '';
-        trendListUnitsEl.innerHTML = '';
         trendNoData.classList.remove('hidden');
         clearChart();
         return;
@@ -193,16 +205,9 @@ function renderFromCache(selectedItems) {
 // ===== グラフ =====
 
 function renderTrendChart(records, selectedItems) {
-    const first    = new Date(records[0].recorded_at);
-    const last     = new Date(records[records.length - 1].recorded_at);
-    const multiDay = first.toDateString() !== last.toDateString();
-
-    const labels = records.map(r => {
-        const dt = new Date(r.recorded_at);
-        return multiDay
-            ? dt.toLocaleString('ja-JP', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
-            : dt.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
-    });
+    const labels = records.map(r =>
+        new Date(r.recorded_at).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })
+    );
 
     const datasets = selectedItems.map(item => ({
         label: `${item.label}（${item.unit}）`,
@@ -276,38 +281,12 @@ function clearChart() {
 }
 
 // ===== 一覧（新しい順） =====
+// 単一・複数項目とも同じテーブル形式で表示する。
+// 列ヘッダーに「項目名 (単位)」を1度だけ表示し、各行は時刻と数値のみ。
 
 function renderTrendList(records, selectedItems) {
     trendListEl.innerHTML = '';
-    const isSingle = selectedItems.length === 1;
-    const singleItem = selectedItems[0];
 
-    // ヘッダーに単位サマリーを表示
-    trendListUnitsEl.innerHTML = selectedItems.map(si =>
-        `<span class="trend-list-unit-tag">
-            <span class="trend-list-unit-dot" style="background:${si.color}"></span>
-            ${si.label} (${si.unit})
-        </span>`
-    ).join('');
-
-    if (isSingle) {
-        // 単一項目: 時刻＋値の行リスト
-        [...records].reverse().forEach(r => {
-            const val = r[singleItem.key];
-            if (val === null || val === undefined) return;
-            const dt = new Date(r.recorded_at);
-            const timeStr = dt.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
-            const el = document.createElement('div');
-            el.className = 'trend-list-item';
-            el.innerHTML = `
-                <span class="trend-list-time">${timeStr}</span>
-                <span class="trend-list-value" style="color:${singleItem.color}">${formatValue(val)}</span>`;
-            trendListEl.appendChild(el);
-        });
-        return;
-    }
-
-    // 複数項目: テーブル形式（項目名は1行目のみ、各行は数値のみ）
     const wrapper = document.createElement('div');
     wrapper.className = 'trend-list-table-wrapper';
 
@@ -317,7 +296,7 @@ function renderTrendList(records, selectedItems) {
     const thead = document.createElement('thead');
     thead.innerHTML = '<tr><th class="trend-th-time">時刻</th>' +
         selectedItems.map(si =>
-            `<th class="trend-th-item" style="color:${si.color}">${si.label}</th>`
+            `<th class="trend-th-item" style="color:${si.color}">${si.label} (${si.unit})</th>`
         ).join('') + '</tr>';
     table.appendChild(thead);
 
@@ -349,6 +328,9 @@ function renderTrendList(records, selectedItems) {
 // ===== イベントリスナー =====
 
 trendSearchBtn.addEventListener('click', loadTrend);
+trendDatePrevBtn.addEventListener('click', () => shiftTrendDate(-1));
+trendDateNextBtn.addEventListener('click', () => shiftTrendDate(+1));
+trendDateInput.addEventListener('change', loadTrend);
 
 trendLabelToggle.addEventListener('click', () => {
     showDataLabels = !showDataLabels;
@@ -380,10 +362,12 @@ document.querySelectorAll('.tab-btn[data-tab="trend"]').forEach(btn => {
 async function prefetchTrend() {
     initTrendDefaults();
     trendInitialized = true;
-    if (!trendStartInput.value || !trendEndInput.value) return;
+    const startISO = dateTimeToISO(trendDateInput.value, trendStartTimeEl.value);
+    const endISO   = dateTimeToISO(trendDateInput.value, trendEndTimeEl.value);
+    if (!startISO || !endISO) return;
     const patId = (typeof currentPatient !== 'undefined' && currentPatient) ? currentPatient.id : '';
     try {
-        const records = await fetchRecords('', 500, localToISO(trendStartInput.value), localToISO(trendEndInput.value), patId);
+        const records = await fetchRecords('', 500, startISO, endISO, patId);
         trendRecordsCache = records;
         // タブが既に表示中なら即座に描画
         if (!document.getElementById('tab-trend').classList.contains('hidden')) {
@@ -397,13 +381,16 @@ async function prefetchTrend() {
 
 function trendPushRecord(record) {
     if (!trendRecordsCache) return;
-    const start = trendStartInput.value ? new Date(trendStartInput.value) : null;
-    if (start && new Date(record.recorded_at) < start) return;
+    // 選択中の日付と異なる日のレコードは反映しない
+    const recDate = new Date(record.recorded_at);
+    if (dateToYMD(recDate) !== trendDateInput.value) return;
+    // 開始時刻より前のレコードは無視
+    if (trendStartTimeEl.value && dateToHM(recDate) < trendStartTimeEl.value) return;
 
     trendRecordsCache.push(record);
     trendRecordsCache.sort((a, b) => new Date(a.recorded_at) - new Date(b.recorded_at));
     // 終了時刻を新しいレコードに合わせて延長（次回「更新」時に漏れなく取得するため）
-    setDatetimeInput(trendEndInput, new Date(record.recorded_at));
+    trendEndTimeEl.value = dateToHM(recDate);
 }
 
 // 初期化

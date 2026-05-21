@@ -771,13 +771,32 @@ main {
     gap: 10px;
 }
 
-.trend-range-row {
+.trend-date-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.trend-time-row {
     display: flex;
     align-items: center;
     gap: 10px;
 }
 
-.trend-datetime-input {
+.trend-date-input {
+    flex: 1;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    border: none;
+    background: transparent;
+    outline: none;
+    text-align: center;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.trend-time-input {
     flex: 1;
     font-size: 14px;
     color: var(--text);
@@ -790,7 +809,12 @@ main {
     cursor: pointer;
 }
 
-.trend-datetime-input:focus { border-bottom-color: var(--accent); }
+.trend-time-input:focus { border-bottom-color: var(--accent); }
+
+.trend-time-sep {
+    font-size: 13px;
+    color: var(--text-muted);
+}
 
 .trend-search-btn {
     width: 100%;
@@ -862,86 +886,6 @@ main {
     box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
 
-.trend-list-header {
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    padding: 9px 14px;
-    background: var(--bg);
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 6px 12px;
-}
-
-.trend-list-units {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px 10px;
-    text-transform: none;
-    letter-spacing: 0;
-    font-weight: 500;
-    color: var(--text);
-}
-
-.trend-list-unit-tag {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 11px;
-}
-
-.trend-list-unit-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    display: inline-block;
-    flex-shrink: 0;
-}
-
-.trend-list {
-    display: flex;
-    flex-direction: column;
-}
-
-.trend-list-item {
-    display: flex;
-    align-items: baseline;
-    gap: 10px;
-    padding: 10px 14px;
-    border-bottom: 1px solid var(--border);
-}
-
-.trend-list-item:last-child { border-bottom: none; }
-
-.trend-list-time {
-    font-size: 12px;
-    color: var(--text-muted);
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
-    flex-shrink: 0;
-}
-
-.trend-list-value {
-    font-size: 20px;
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-    color: var(--filled-value);
-    line-height: 1;
-    flex: 1;
-    text-align: right;
-}
-
-.trend-list-unit {
-    font-size: 11px;
-    color: var(--text-muted);
-    flex-shrink: 0;
-    min-width: 36px;
-}
-
 .trend-loading {
     padding: 20px 14px;
     font-size: 13px;
@@ -949,7 +893,7 @@ main {
     text-align: center;
 }
 
-/* 複数項目選択時のテーブル形式一覧 */
+/* 一覧テーブル */
 .trend-list-table-wrapper {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;

@@ -27,7 +27,7 @@
 | 項目 | 単位 |
 |---|---|
 | 心拍数 | bpm |
-| 血圧（収縮期 / 平均 / 拡張期） | mmHg |
+| P1（観血測定平均） / 血圧（平均） / P2（観血測定平均） | mmHg |
 | 呼吸数 | 回/分 |
 | SpO2 | % |
 | EtCO2 | mmHg |
@@ -44,6 +44,17 @@
 | ガス流量 O2 / Air | L/min |
 | FiO2 | % |
 
+### 人工呼吸器
+
+| 項目 | 単位 |
+|---|---|
+| 設定呼吸回数 | bpm |
+| 設定吸気圧（+PEEP） | cmH2O |
+| 吸気時間 | sec |
+| PEEP | cmH2O |
+| トリガ感度 | cmH2O |
+| 吸気流量 | L/min |
+
 ---
 
 ## 画面の使い方
@@ -51,10 +62,11 @@
 ### 画面構成
 
 ヘッダーに **患者選択行** と **「撮影」「撮影記録」「トレンド」「患者管理」** の 4 タブがあります。
+ヘッダー右上の `?` ボタンから **マニュアルモーダル** を開けます（基本フロー・各タブの使い方・その他シナリオを記載）。
 
 ```
 ┌──────────────────────────────┐
-│ ≈ モニター情報読取   12:34   │
+│ ≈ モニター情報読取   12:34 ⓘ │  ← 右端の ? でマニュアル
 │ 👤 田中 太郎 ▼               │  ← 患者選択（タップで切り替え）
 ├───────┬──────┬───────┬───────┤
 │ 撮影  │撮影記録│トレンド│患者管理│
@@ -101,8 +113,8 @@
 │ 14:32  [Bio-Scope AM140]  ✏  │  ← 右端の ✏ で値を修正・削除可能
 │ [カルテ番号 12345] [体重 3.2 kg] │  ← 患者情報チップ（入力済み項目のみ表示）
 │ 基本バイタル                  │
-│ 心拍数        75 bpm         │  ← 縦1列リスト（ラベル左・値右）
-│ 血圧（収縮期） 120 mmHg      │
+│ 心拍数             75 bpm    │  ← 縦1列リスト（ラベル左・値右）
+│ P1（観血測定平均） 90 mmHg   │
 │ SpO2          98 %           │
 │  ...（全 17 項目）            │
 ├──────────────────────────────┤
@@ -145,17 +157,17 @@
 ```
 ┌──────────────────────────────┐
 │ [✓心拍数][✓血圧(平均)][✓呼吸数][✓体温]│  ← デフォルト選択4項目
-│ [P1(収縮期)][P2(拡張期)][SpO2][EtCO2]│  ← 追加選択可能な4項目
-│ 開始 [2026/04/30 09:15]      │  ← 日時ピッカー
-│ 終了 [2026/04/30 14:32]      │
+│ [P1(観血測定平均)][P2(観血測定平均)][SpO2][EtCO2]│  ← 追加選択可能な4項目
+│ ‹  2026/05/21  ›             │  ← 日付ピッカー（前日・翌日ボタン付き）
+│ 時間  [09:15] 〜 [14:32]     │  ← 同日内の時間範囲
 │ [更新]              [数値表示]│  ← 数値表示ボタン
 │ ╔══════════════════════╗      │
 │ ║ ─心拍数  ─ SpO2     ║      │  ← 凡例（2項目以上選択時）
 │ ║   09:15   10:32  14:32║     │
 │ ╚══════════════════════╝      │
-│ 記録一覧                      │
-│ 04/30 14:32  心拍数: 78 bpm  │  ← 複数選択時は横並びで表示
-│ 04/30 10:32  心拍数: 75 bpm  │
+│              10:32  14:32      │  ← 列=時刻（昇順・1行目）
+│ 心拍数(bpm)    75    78        │  ← 行=項目（1列目スティッキー）
+│ 体温(°C)      38.1  38.2       │
 └──────────────────────────────┘
 ```
 
@@ -164,15 +176,16 @@
 | 項目 | デフォルト |
 |---|---|
 | 心拍数 / 血圧（平均）/ 呼吸数 / 体温 | ✓ 選択済み |
-| P1（収縮期血圧）/ P2（拡張期血圧）/ SpO2 / EtCO2 | 非選択 |
+| P1（観血測定平均）/ P2（観血測定平均）/ SpO2 / EtCO2 | 非選択 |
 
 #### 使い方
 
-1. タブを開くと **今日の最初の計測時刻〜現在** がデフォルト期間として設定される
+1. タブを開くと **今日・00:00〜23:59** がデフォルト期間として設定される
 2. 確認したい項目のチップをタップして選択する（複数同時選択可・変更と同時に自動更新）
-3. 「開始」「終了」を変更して「更新」をタップすると期間を変えられる
-4. グラフの点にタッチするとその時刻の全選択項目の値がツールチップで表示される
-5. **「数値表示」ボタン**をタップすると各データ点の値を常時表示できる（再タップで非表示）
+3. 日付ピッカー（前日・翌日ボタン）で日を切り替えると自動で再読み込みする
+4. 「時間」の開始・終了を変更して「更新」をタップするとその日の中の時間範囲を絞り込める
+5. グラフの点にタッチするとその時刻の全選択項目の値がツールチップで表示される
+6. **「数値表示」ボタン**をタップすると各データ点の値を常時表示できる（再タップで非表示）
 
 > 患者を選択中の場合、その患者のデータのみがグラフ・一覧に表示されます。
 
@@ -242,6 +255,9 @@ CREATE TABLE vital_records (
     minute_ventilation   NUMERIC, peak_airway_pressure NUMERIC, iso_dial   NUMERIC,
     iso_inspired         NUMERIC, iso_expired     NUMERIC, gas_flow_o2     NUMERIC,
     gas_flow_air         NUMERIC, fio2            NUMERIC,
+    set_respiratory_rate NUMERIC, set_inspiratory_pressure NUMERIC,
+    inspiratory_time     NUMERIC, peep            NUMERIC,
+    trigger_sensitivity  NUMERIC, inspiratory_flow NUMERIC,
     chart_number         INTEGER, patient_name    TEXT,    body_weight     NUMERIC,
     notes                TEXT
 );
@@ -263,6 +279,18 @@ CREATE INDEX idx_vital_records_patient_id  ON vital_records (patient_id);
 > ALTER TABLE vital_records ADD COLUMN patient_id UUID REFERENCES patients(id);
 > CREATE INDEX idx_vital_records_patient_id ON vital_records (patient_id);
 > ```
+
+> **既存テーブルへの追加（人工呼吸器グループ追加時のマイグレーション）**:
+> ```sql
+> ALTER TABLE vital_records
+>     ADD COLUMN set_respiratory_rate     NUMERIC,
+>     ADD COLUMN set_inspiratory_pressure NUMERIC,
+>     ADD COLUMN inspiratory_time         NUMERIC,
+>     ADD COLUMN peep                     NUMERIC,
+>     ADD COLUMN trigger_sensitivity      NUMERIC,
+>     ADD COLUMN inspiratory_flow         NUMERIC;
+> ```
+> 未実行のままだと撮影時の DB 保存に失敗するため、本番 DB にも必ず適用してください。
 
 ### 2. アプリをセットアップする
 
@@ -410,7 +438,8 @@ monitor_app/
 │       ├── camera.js     # カメラキャプチャ処理
 │       ├── api.js        # バックエンド API 通信（患者 CRUD 含む）
 │       ├── trend.js      # トレンドタブ（グラフ・一覧・期間選択）
-│       └── patients.js   # 患者管理タブ・患者選択モーダル・患者登録/編集モーダル
+│       ├── patients.js   # 患者管理タブ・患者選択モーダル・患者登録/編集モーダル
+│       └── manual.js     # マニュアルモーダル（ヘッダー右上 ? から開く）
 ├── vercel.json
 ├── requirements.txt
 ├── start.sh              # Cloudflare Tunnel 同時起動スクリプト

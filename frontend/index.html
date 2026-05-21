@@ -20,6 +20,14 @@
         </svg>
         <h1>モニター情報読取</h1>
         <span id="capture-time" class="capture-time"></span>
+        <button id="manual-btn" class="manual-btn" type="button" aria-label="マニュアル">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+                <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+        </button>
     </div>
     <div class="patient-row">
         <button id="patient-selector-btn" class="patient-selector-btn" type="button">
@@ -88,15 +96,18 @@
         <!-- 項目選択（チップ） -->
         <div id="trend-field-panel" class="trend-field-panel"></div>
 
-        <!-- 期間選択 -->
+        <!-- 期間選択：日付 + 時間範囲 -->
         <div class="trend-range-card">
-            <div class="trend-range-row">
-                <span class="trend-ctrl-label">開始</span>
-                <input type="datetime-local" id="trend-start" class="trend-datetime-input">
+            <div class="trend-date-row">
+                <button id="trend-date-prev" class="date-nav-btn" type="button" aria-label="前の日">&#8249;</button>
+                <input type="date" id="trend-date" class="trend-date-input">
+                <button id="trend-date-next" class="date-nav-btn" type="button" aria-label="次の日">&#8250;</button>
             </div>
-            <div class="trend-range-row">
-                <span class="trend-ctrl-label">終了</span>
-                <input type="datetime-local" id="trend-end" class="trend-datetime-input">
+            <div class="trend-time-row">
+                <span class="trend-ctrl-label">時間</span>
+                <input type="time" id="trend-start-time" class="trend-time-input">
+                <span class="trend-time-sep">〜</span>
+                <input type="time" id="trend-end-time" class="trend-time-input">
             </div>
             <button id="trend-search-btn" class="trend-search-btn" type="button">更新</button>
         </div>
@@ -112,7 +123,6 @@
 
         <!-- 一覧 -->
         <div class="trend-list-section">
-            <div class="trend-list-header">記録一覧</div>
             <div id="trend-list" class="trend-list">
                 <p class="trend-loading">項目を選択してください</p>
             </div>
@@ -278,11 +288,333 @@
     </div>
 </div>
 
+<!-- ===== マニュアルモーダル ===== -->
+<div id="manual-modal" class="modal manual-modal hidden" role="dialog" aria-modal="true" aria-label="マニュアル">
+    <div class="modal-backdrop" id="manual-modal-backdrop"></div>
+    <div class="manual-sheet">
+        <div class="manual-header">
+            <span class="manual-title">📖 マニュアル</span>
+            <button id="manual-close" class="modal-close" type="button" aria-label="閉じる">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+            </button>
+        </div>
+
+        <nav class="manual-toc">
+            <a href="#manual-flow">① 基本の流れ</a>
+            <a href="#manual-tabs">② 各タブの使い方</a>
+            <a href="#manual-extra">③ その他のシナリオ</a>
+        </nav>
+
+        <div class="manual-body">
+
+            <!-- ===== ① 基本の流れ ===== -->
+            <section id="manual-flow" class="manual-section">
+                <h2 class="manual-h2">① 基本の流れ</h2>
+                <p class="manual-lead">麻酔モニタリングの場面で、このアプリは次の順で使うのを推奨します。</p>
+
+                <div class="manual-flow">
+                    <div class="manual-flow-step">
+                        <div class="manual-flow-num">1</div>
+                        <div class="manual-flow-icon">🐾</div>
+                        <div class="manual-flow-text">
+                            <div class="manual-flow-title">患者管理タブで患者を登録</div>
+                            <div class="manual-flow-desc">カルテ番号・名前・体重・種別（犬/猫/その他）。麻酔開始前にあらかじめ登録しておくのが基本。</div>
+                        </div>
+                    </div>
+                    <div class="manual-flow-arrow">↓</div>
+                    <div class="manual-flow-step">
+                        <div class="manual-flow-num">2</div>
+                        <div class="manual-flow-icon">👤</div>
+                        <div class="manual-flow-text">
+                            <div class="manual-flow-title">ヘッダーから対象患者を選択</div>
+                            <div class="manual-flow-desc">「患者を選択」をタップ → 対象を選ぶ。以降の撮影記録はこの患者に自動で紐付けられる。</div>
+                        </div>
+                    </div>
+                    <div class="manual-flow-arrow">↓</div>
+                    <div class="manual-flow-step">
+                        <div class="manual-flow-num">3</div>
+                        <div class="manual-flow-icon">📷</div>
+                        <div class="manual-flow-text">
+                            <div class="manual-flow-title">撮影タブでバイタルモニターを撮影</div>
+                            <div class="manual-flow-desc">麻酔中、カメラで一発撮影。AI が値を自動抽出し、DB に自動保存される。</div>
+                        </div>
+                    </div>
+                    <div class="manual-flow-arrow">↓</div>
+                    <div class="manual-flow-step">
+                        <div class="manual-flow-num">4</div>
+                        <div class="manual-flow-icon">📋</div>
+                        <div class="manual-flow-text">
+                            <div class="manual-flow-title">撮影記録タブで記録を確認</div>
+                            <div class="manual-flow-desc">その日の記録を時刻順に閲覧。AI の読み取り誤りは ✏ ボタンで補正できる。</div>
+                        </div>
+                    </div>
+                    <div class="manual-flow-arrow">↓</div>
+                    <div class="manual-flow-step">
+                        <div class="manual-flow-num">5</div>
+                        <div class="manual-flow-icon">📈</div>
+                        <div class="manual-flow-text">
+                            <div class="manual-flow-title">トレンドタブで時系列変化を確認</div>
+                            <div class="manual-flow-desc">心拍数・血圧などをグラフで可視化。テーブルでも時刻ごとの値を一覧できる。</div>
+                        </div>
+                    </div>
+                </div>
+
+                <p class="manual-note">⚠️ 3 の撮影時は <strong>解析中（スピナー表示中）にリロードしない</strong> でください。サーバー処理が中断されると、その回の記録が保存されません。</p>
+            </section>
+
+            <!-- ===== ② 各タブの使い方 ===== -->
+            <section id="manual-tabs" class="manual-section">
+                <h2 class="manual-h2">② 各タブの使い方</h2>
+
+                <!-- ===== 患者管理タブ ===== -->
+                <h3 class="manual-h3">🐾 患者管理タブ</h3>
+                <p>患者の登録・編集・削除を行います。</p>
+
+                <div class="manual-mock">
+                    <div class="manual-mock-titlebar">患者管理</div>
+                    <div class="manual-mock-bar">
+                        <span class="manual-mock-btn">＋ 新規患者登録</span>
+                    </div>
+                    <div class="manual-mock-card">
+                        <div class="manual-mock-card-head">
+                            <span>🐶 田中 太郎 <span class="manual-mock-chip on">選択中</span></span>
+                            <span class="manual-mock-btn ghost">✏</span>
+                        </div>
+                        <div class="manual-mock-kv">
+                            <span class="manual-mock-kv-label">カルテ番号</span>
+                            <span class="manual-mock-kv-value">12345</span>
+                        </div>
+                        <div class="manual-mock-kv">
+                            <span class="manual-mock-kv-label">体重</span>
+                            <span class="manual-mock-kv-value">5.2 kg</span>
+                        </div>
+                        <div style="margin-top:8px; text-align:right;">
+                            <span class="manual-mock-btn">選択</span>
+                        </div>
+                    </div>
+                    <div class="manual-mock-card">
+                        <div class="manual-mock-card-head">
+                            <span>🐱 山田 花子</span>
+                            <span class="manual-mock-btn ghost">✏</span>
+                        </div>
+                        <div class="manual-mock-kv">
+                            <span class="manual-mock-kv-label">カルテ番号</span>
+                            <span class="manual-mock-kv-value">67890</span>
+                        </div>
+                        <div style="margin-top:8px; text-align:right;">
+                            <span class="manual-mock-btn">選択</span>
+                        </div>
+                    </div>
+                </div>
+                <ul class="manual-ul">
+                    <li><strong>新規登録</strong>: 名前（必須）・カルテ番号・体重・種別（犬/猫/その他）を入力して保存</li>
+                    <li><strong>編集 / 削除</strong>: 患者カードの ✏ ボタンで編集モーダルを開く。削除もモーダル内から実行</li>
+                    <li><strong>選択中バッジ</strong>: ヘッダーで現在選択している患者には [選択中] が付く</li>
+                    <li><strong>対象患者の切り替え</strong>: 各カードの [選択] ボタンで切り替え（ヘッダーにも反映）</li>
+                </ul>
+
+                <!-- ===== 撮影タブ ===== -->
+                <h3 class="manual-h3">📷 撮影タブ</h3>
+                <p>カメラでバイタルモニターを撮影し、AI で値を抽出します。撮影と同時に DB に自動保存されます。</p>
+
+                <div class="manual-mock">
+                    <div class="manual-mock-titlebar">撮影</div>
+                    <div class="manual-mock-bar">
+                        モニター種別: <strong>機種指定なし ▼</strong>
+                        <span style="margin-left:auto;" class="manual-mock-btn">◉ 撮影開始</span>
+                    </div>
+                    <div style="padding: 10px 12px;">
+                        <div style="font-size:11px;font-weight:700;color:var(--text-muted);margin:4px 0 6px;">基本バイタル</div>
+                        <div class="manual-mock-kv"><span class="manual-mock-kv-label">心拍数</span><span class="manual-mock-kv-value" style="color:var(--null-value);">---</span></div>
+                        <div class="manual-mock-kv"><span class="manual-mock-kv-label">P1（観血測定平均）</span><span class="manual-mock-kv-value" style="color:var(--null-value);">---</span></div>
+                        <div class="manual-mock-kv"><span class="manual-mock-kv-label">SpO2</span><span class="manual-mock-kv-value" style="color:var(--null-value);">---</span></div>
+                        <div style="font-size:11px;font-weight:700;color:var(--text-muted);margin:10px 0 6px;">人工呼吸器</div>
+                        <div class="manual-mock-kv"><span class="manual-mock-kv-label">設定呼吸回数</span><span class="manual-mock-kv-value" style="color:var(--null-value);">---</span></div>
+                        <div class="manual-mock-kv"><span class="manual-mock-kv-label">PEEP</span><span class="manual-mock-kv-value" style="color:var(--null-value);">---</span></div>
+                    </div>
+                </div>
+
+                <p style="margin-top: 16px;"><strong>撮影モーダル</strong>（「撮影開始」タップ時）:</p>
+                <div class="manual-mock">
+                    <div class="manual-mock-titlebar" style="display:flex;justify-content:space-between;">
+                        <span>撮影</span><span>✕</span>
+                    </div>
+                    <div style="background:#000;height:120px;position:relative;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.5);font-size:11px;">
+                        カメラプレビュー（解析中はスピナー）
+                    </div>
+                    <div style="padding:12px;text-align:center;background:var(--card-bg);">
+                        <span style="display:inline-block;width:48px;height:48px;border-radius:50%;background:#fff;border:3px solid var(--accent);box-shadow:0 0 0 2px #fff inset;"></span>
+                        <div style="font-size:10px;color:var(--text-muted);margin-top:4px;">シャッター</div>
+                    </div>
+                </div>
+                <ol class="manual-ol">
+                    <li><strong>モニター種別</strong>を選ぶ（不明な場合は「機種指定なし」のままで OK。AI が自動判定）</li>
+                    <li><strong>「撮影開始」</strong>でカメラが起動</li>
+                    <li><strong>シャッター</strong>を押すと解析開始（数秒〜十数秒）</li>
+                    <li>解析完了で値が画面に反映 + DB に自動保存される</li>
+                    <li>「自動検出: 機種名」バッジが出れば、AI が機種識別したことを示す</li>
+                </ol>
+                <p class="manual-note">⚠️ <strong>解析中はリロード／タブクローズを避ける</strong>。離れようとするとブラウザの警告が出ます。DB 保存に失敗した場合はエラーバナーで通知されます。</p>
+
+                <!-- ===== 撮影記録タブ ===== -->
+                <h3 class="manual-h3">📋 撮影記録タブ</h3>
+                <p>その日の撮影記録を時刻順に一覧表示します。AI の読み取り誤りはここで修正できます。</p>
+
+                <div class="manual-mock">
+                    <div class="manual-mock-titlebar">撮影記録</div>
+                    <div class="manual-mock-bar" style="justify-content:center;gap:14px;">
+                        <span class="manual-mock-btn ghost">‹</span>
+                        <strong style="color:var(--text);">2026/05/21</strong>
+                        <span class="manual-mock-btn ghost">›</span>
+                    </div>
+                    <div class="manual-mock-card">
+                        <div class="manual-mock-card-head">
+                            <span>14:32 · Bio-Scope AM140</span>
+                            <span class="manual-mock-btn ghost">✏</span>
+                        </div>
+                        <div style="margin-bottom:6px;">
+                            <span class="manual-mock-chip">カルテ 12345</span>
+                            <span class="manual-mock-chip">5.2 kg</span>
+                        </div>
+                        <div class="manual-mock-kv"><span class="manual-mock-kv-label">心拍数</span><span class="manual-mock-kv-value">75 bpm</span></div>
+                        <div class="manual-mock-kv"><span class="manual-mock-kv-label">P1（観血測定平均）</span><span class="manual-mock-kv-value">90 mmHg</span></div>
+                        <div class="manual-mock-kv"><span class="manual-mock-kv-label">SpO2</span><span class="manual-mock-kv-value">98 %</span></div>
+                    </div>
+                </div>
+                <ul class="manual-ul">
+                    <li><strong>日付の切り替え</strong>: 上部の日付ピッカー or ‹ › ボタンで前日・翌日へ</li>
+                    <li><strong>患者でフィルタ</strong>: ヘッダーで患者選択中ならその患者の記録のみ表示</li>
+                    <li><strong>記録の修正</strong>: 各カードの ✏ ボタンで全項目を編集</li>
+                    <li><strong>記録の削除</strong>: 修正モーダル内の「削除」ボタン（要確認）</li>
+                    <li><strong>後から患者紐付け</strong>: 修正モーダル先頭の「患者」セレクトで既存患者を選ぶと、名前・カルテ番号・体重が自動入力される</li>
+                </ul>
+
+                <!-- ===== トレンドタブ ===== -->
+                <h3 class="manual-h3">📈 トレンドタブ</h3>
+                <p>複数項目を時系列で重ねてグラフ表示します。1 日単位で表示し、時間範囲を指定できます。</p>
+
+                <div class="manual-mock">
+                    <div class="manual-mock-titlebar">トレンド</div>
+                    <div style="padding:10px 12px;">
+                        <span class="manual-mock-chip on">✓ 心拍数</span>
+                        <span class="manual-mock-chip on">✓ 血圧(平均)</span>
+                        <span class="manual-mock-chip on">✓ 呼吸数</span>
+                        <span class="manual-mock-chip on">✓ 体温</span>
+                        <span class="manual-mock-chip">P1</span>
+                        <span class="manual-mock-chip">P2</span>
+                        <span class="manual-mock-chip">SpO2</span>
+                        <span class="manual-mock-chip">EtCO2</span>
+                    </div>
+                    <div class="manual-mock-bar" style="justify-content:center;gap:14px;">
+                        <span class="manual-mock-btn ghost">‹</span>
+                        <strong style="color:var(--text);">2026/05/21</strong>
+                        <span class="manual-mock-btn ghost">›</span>
+                    </div>
+                    <div class="manual-mock-bar">
+                        時間 <strong style="color:var(--text);">00:00</strong> 〜 <strong style="color:var(--text);">23:59</strong>
+                        <span style="margin-left:auto;" class="manual-mock-btn">更新</span>
+                        <span class="manual-mock-btn ghost">数値表示</span>
+                    </div>
+                    <div class="manual-mock-chart"></div>
+                    <div style="overflow-x:auto;">
+                    <table class="manual-mock-table">
+                        <thead>
+                            <tr><th></th><th>12:15</th><th>14:32</th><th>16:00</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td class="first-col">心拍数 (bpm)</td><td>75</td><td>78</td><td>80</td></tr>
+                            <tr><td class="first-col">体温 (°C)</td><td>38.1</td><td>38.2</td><td>38.0</td></tr>
+                        </tbody>
+                    </table>
+                    </div>
+                </div>
+                <ol class="manual-ol">
+                    <li><strong>項目チップ</strong>をタップして表示項目を選択（複数可・変更で自動更新）</li>
+                    <li><strong>日付</strong>を選択（前日・翌日ボタンで切替、変更で自動更新）</li>
+                    <li><strong>時間範囲</strong>を指定（デフォルト 00:00 〜 23:59）→「更新」</li>
+                    <li><strong>「数値表示」ボタン</strong>でグラフ各点の値を ON/OFF</li>
+                    <li><strong>テーブル</strong>: 1 列目（項目名）は横スクロール時も固定。1 行目（時刻）はスティッキー</li>
+                </ol>
+            </section>
+
+            <!-- ===== ③ その他のシナリオ ===== -->
+            <section id="manual-extra" class="manual-section">
+                <h2 class="manual-h2">③ その他のシナリオ</h2>
+
+                <h3 class="manual-h3">❓ 患者登録前に撮影してしまった場合</h3>
+                <p>撮影は患者選択なしでも実行できます。後から記録を編集して患者に紐付けることができます。</p>
+
+                <div class="manual-flow">
+                    <div class="manual-flow-step">
+                        <div class="manual-flow-num">1</div>
+                        <div class="manual-flow-icon">📷</div>
+                        <div class="manual-flow-text">
+                            <div class="manual-flow-title">患者未選択のまま撮影</div>
+                            <div class="manual-flow-desc">ヘッダーで患者を選んでいなくても撮影は実行できる。</div>
+                        </div>
+                    </div>
+                    <div class="manual-flow-arrow">↓</div>
+                    <div class="manual-flow-step">
+                        <div class="manual-flow-num">2</div>
+                        <div class="manual-flow-icon">📋</div>
+                        <div class="manual-flow-text">
+                            <div class="manual-flow-title">撮影記録タブで該当記録の ✏ をタップ</div>
+                            <div class="manual-flow-desc">日付ピッカーで撮影した日を表示し、対象の記録カードを開く。</div>
+                        </div>
+                    </div>
+                    <div class="manual-flow-arrow">↓</div>
+                    <div class="manual-flow-step">
+                        <div class="manual-flow-num">3</div>
+                        <div class="manual-flow-icon">👤</div>
+                        <div class="manual-flow-text">
+                            <div class="manual-flow-title">修正モーダル先頭の「患者」セレクトから患者を選択</div>
+                            <div class="manual-flow-desc">既存患者を選ぶと、名前・カルテ番号・体重が自動入力される（必要なら手動で再編集）。</div>
+                        </div>
+                    </div>
+                    <div class="manual-flow-arrow">↓</div>
+                    <div class="manual-flow-step">
+                        <div class="manual-flow-num">4</div>
+                        <div class="manual-flow-icon">✅</div>
+                        <div class="manual-flow-text">
+                            <div class="manual-flow-title">「保存」で患者紐付けが完了</div>
+                            <div class="manual-flow-desc">レコードの patient_id がその患者に更新される。</div>
+                        </div>
+                    </div>
+                </div>
+
+                <h3 class="manual-h3">❓ AI の読み取り間違いを修正したい</h3>
+                <p>撮影記録タブの ✏ ボタン → 修正モーダルで該当項目を編集して保存します。
+                数値を <strong>空欄にすると null（---）</strong> として保存されます。</p>
+
+                <h3 class="manual-h3">❓ 患者選択中に他の患者の記録も見たい</h3>
+                <p>ヘッダーの患者選択行をタップ → モーダル上部の <strong>「選択解除（全患者表示）」</strong> をタップすると、全患者の記録が表示されます。</p>
+
+                <h3 class="manual-h3">❓ トレンドで複数日のデータを見たい</h3>
+                <p>現バージョンは 1 日単位での表示のみです。日付ピッカーの ‹ › ボタンで日を切り替えて確認してください。</p>
+
+                <h3 class="manual-h3">❓ 撮影してもデータが保存されなかった</h3>
+                <p>以下のいずれかが原因の可能性があります:</p>
+                <ul class="manual-ul">
+                    <li><strong>解析中にリロード／タブクローズした</strong> → サーバー処理が中断され保存されていない</li>
+                    <li><strong>DB 接続エラー</strong> → 画面にエラーバナーが表示される。サーバー管理者に確認</li>
+                </ul>
+                <p>解析中はブラウザの警告が出るので、画面に値が表示されるまでリロードしないでください。</p>
+            </section>
+
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script src="/js/camera.js"></script>
 <script src="/js/api.js"></script>
 <script src="/js/app.js"></script>
 <script src="/js/trend.js"></script>
 <script src="/js/patients.js"></script>
+<script src="/js/manual.js"></script>
 </body>
 </html>

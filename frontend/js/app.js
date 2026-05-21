@@ -6,9 +6,9 @@ const VITAL_GROUPS = [
         title: '基本バイタル',
         items: [
             { key: 'heart_rate',       label: '心拍数',        unit: 'bpm'    },
-            { key: 'bp_systolic',      label: '血圧（収縮期）', unit: 'mmHg'  },
-            { key: 'bp_mean',          label: '血圧（平均）',   unit: 'mmHg'  },
-            { key: 'bp_diastolic',     label: '血圧（拡張期）', unit: 'mmHg'  },
+            { key: 'bp_systolic',      label: 'P1（観血測定平均）', unit: 'mmHg' },
+            { key: 'bp_mean',          label: '血圧（平均）',       unit: 'mmHg' },
+            { key: 'bp_diastolic',     label: 'P2（観血測定平均）', unit: 'mmHg' },
             { key: 'respiratory_rate', label: '呼吸数',        unit: '回/分'  },
             { key: 'spo2',             label: 'SpO2',          unit: '%'      },
             { key: 'etco2',            label: 'EtCO2',         unit: 'mmHg'  },
@@ -27,6 +27,17 @@ const VITAL_GROUPS = [
             { key: 'gas_flow_o2',          label: 'ガス流量 O2',   unit: 'L/min'  },
             { key: 'gas_flow_air',         label: 'ガス流量 Air',  unit: 'L/min'  },
             { key: 'fio2',                 label: 'FiO2',          unit: '%'      },
+        ],
+    },
+    {
+        title: '人工呼吸器',
+        items: [
+            { key: 'set_respiratory_rate',     label: '設定呼吸回数',       unit: 'bpm'   },
+            { key: 'set_inspiratory_pressure', label: '設定吸気圧（+PEEP）',unit: 'cmH2O' },
+            { key: 'inspiratory_time',         label: '吸気時間',           unit: 'sec'   },
+            { key: 'peep',                     label: 'PEEP',               unit: 'cmH2O' },
+            { key: 'trigger_sensitivity',      label: 'トリガ感度',         unit: 'cmH2O' },
+            { key: 'inspiratory_flow',         label: '吸気流量',           unit: 'L/min' },
         ],
     },
 ];
@@ -211,9 +222,16 @@ modalClose.addEventListener('click', closeModal);
 modalBackdrop.addEventListener('click', closeModal);
 
 // ===== 撮影・解析 =====
+// 解析中（API応答待ち）にリロード／タブクローズしようとした場合の警告
+function beforeUnloadGuard(e) {
+    e.preventDefault();
+    e.returnValue = '';
+}
+
 shutterBtn.addEventListener('click', async () => {
     shutterBtn.disabled = true;
     analyzingOverlay.classList.remove('hidden');
+    window.addEventListener('beforeunload', beforeUnloadGuard);
 
     try {
         const blob = await camera.capture();
@@ -233,12 +251,15 @@ shutterBtn.addEventListener('click', async () => {
             };
             prependRecord(newRecord);
             trendPushRecord(newRecord);
+        } else {
+            showError('解析結果を画面に表示しましたが、DB への保存に失敗しました。サーバーログを確認してください。');
         }
     } catch (err) {
         closeModal();
         showError(err.message || '解析中にエラーが発生しました');
+    } finally {
+        window.removeEventListener('beforeunload', beforeUnloadGuard);
     }
-    // finally は不要（closeModal 後はモーダルが非表示のため）
 });
 
 // ===== 結果レンダリング =====

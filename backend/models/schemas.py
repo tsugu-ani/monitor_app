@@ -22,6 +22,13 @@ class VitalData(BaseModel):
     gas_flow_o2: Optional[float] = None
     gas_flow_air: Optional[float] = None
     fio2: Optional[float] = None
+    # 人工呼吸器設定値
+    set_respiratory_rate: Optional[float] = None
+    set_inspiratory_pressure: Optional[float] = None
+    inspiratory_time: Optional[float] = None
+    peep: Optional[float] = None
+    trigger_sensitivity: Optional[float] = None
+    inspiratory_flow: Optional[float] = None
     # 患者情報（手入力）
     chart_number: Optional[int] = None
     patient_name: Optional[str] = None

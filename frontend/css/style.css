@@ -1632,6 +1632,239 @@ main {
     white-space: pre;
 }
 
+/* ===== マニュアル: フロー図（カード + 矢印） ===== */
+.manual-flow {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 12px 0 18px;
+}
+
+.manual-flow-step {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+    border-radius: 10px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+
+.manual-flow-num {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    background: var(--accent);
+    color: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 13px;
+}
+
+.manual-flow-icon {
+    font-size: 22px;
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+.manual-flow-text { flex: 1; min-width: 0; }
+
+.manual-flow-title {
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--text);
+    line-height: 1.3;
+}
+
+.manual-flow-desc {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 3px;
+    line-height: 1.45;
+}
+
+.manual-flow-arrow {
+    color: var(--accent);
+    text-align: center;
+    font-size: 18px;
+    line-height: 1;
+    margin: 0;
+    font-weight: 700;
+}
+
+/* ===== マニュアル: UI モックアップ ===== */
+.manual-mock {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin: 12px 0 18px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.manual-mock-titlebar {
+    background: var(--header-bg);
+    color: #fff;
+    padding: 8px 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.manual-mock-tabbar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    background: var(--header-bg);
+    color: rgba(255,255,255,0.65);
+    font-size: 11px;
+    border-top: 1px solid rgba(255,255,255,0.12);
+}
+
+.manual-mock-tab {
+    padding: 7px 4px;
+    text-align: center;
+    border-right: 1px solid rgba(255,255,255,0.12);
+}
+.manual-mock-tab:last-child { border-right: none; }
+
+.manual-mock-tab.active {
+    color: #fff;
+    background: rgba(255,255,255,0.08);
+    box-shadow: inset 0 -2px 0 var(--accent);
+    font-weight: 700;
+}
+
+.manual-mock-bar {
+    background: var(--bg);
+    padding: 8px 12px;
+    font-size: 12px;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.manual-mock-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin: 10px 12px;
+    padding: 10px 12px;
+}
+
+.manual-mock-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 700;
+    font-size: 12px;
+    margin-bottom: 8px;
+    color: var(--text);
+}
+
+.manual-mock-kv {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    padding: 3px 0;
+}
+
+.manual-mock-kv-label { color: var(--text-muted); }
+.manual-mock-kv-value {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.manual-mock-btn {
+    display: inline-block;
+    padding: 5px 10px;
+    background: var(--accent);
+    color: #fff;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.manual-mock-btn.ghost {
+    background: var(--card-bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+}
+
+.manual-mock-chip {
+    display: inline-block;
+    padding: 4px 9px;
+    border-radius: 999px;
+    font-size: 11px;
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    margin: 2px 3px 2px 0;
+}
+
+.manual-mock-chip.on {
+    background: #eff6ff;
+    color: var(--accent);
+    border-color: var(--accent);
+    font-weight: 700;
+}
+
+.manual-mock-chart {
+    margin: 10px 12px;
+    height: 80px;
+    background: linear-gradient(180deg, #eff6ff 0%, #ffffff 100%);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    position: relative;
+    overflow: hidden;
+}
+
+.manual-mock-chart::before {
+    content: '';
+    position: absolute;
+    inset: 12px;
+    background:
+        linear-gradient(45deg, transparent 48%, var(--accent) 49%, var(--accent) 51%, transparent 52%) no-repeat,
+        linear-gradient(-30deg, transparent 48%, #dc2626 49%, #dc2626 51%, transparent 52%) no-repeat;
+    background-size: 100% 60%, 100% 80%;
+    background-position: 0 60%, 0 30%;
+    opacity: 0.5;
+}
+
+.manual-mock-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0;
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+}
+
+.manual-mock-table th,
+.manual-mock-table td {
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--border);
+    text-align: center;
+    white-space: nowrap;
+}
+
+.manual-mock-table th {
+    background: var(--bg);
+    font-size: 10px;
+    color: var(--text-muted);
+    font-weight: 700;
+}
+
+.manual-mock-table .first-col {
+    text-align: left;
+    font-weight: 700;
+    color: var(--text);
+}
+
 .manual-ul,
 .manual-ol {
     margin: 6px 0 12px;

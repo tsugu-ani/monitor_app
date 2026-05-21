@@ -44,6 +44,17 @@
 | ガス流量 O2 / Air | L/min |
 | FiO2 | % |
 
+### 人工呼吸器
+
+| 項目 | 単位 |
+|---|---|
+| 設定呼吸回数 | bpm |
+| 設定吸気圧（+PEEP） | cmH2O |
+| 吸気時間 | sec |
+| PEEP | cmH2O |
+| トリガ感度 | cmH2O |
+| 吸気流量 | L/min |
+
 ---
 
 ## 画面の使い方
@@ -243,6 +254,9 @@ CREATE TABLE vital_records (
     minute_ventilation   NUMERIC, peak_airway_pressure NUMERIC, iso_dial   NUMERIC,
     iso_inspired         NUMERIC, iso_expired     NUMERIC, gas_flow_o2     NUMERIC,
     gas_flow_air         NUMERIC, fio2            NUMERIC,
+    set_respiratory_rate NUMERIC, set_inspiratory_pressure NUMERIC,
+    inspiratory_time     NUMERIC, peep            NUMERIC,
+    trigger_sensitivity  NUMERIC, inspiratory_flow NUMERIC,
     chart_number         INTEGER, patient_name    TEXT,    body_weight     NUMERIC,
     notes                TEXT
 );
@@ -264,6 +278,18 @@ CREATE INDEX idx_vital_records_patient_id  ON vital_records (patient_id);
 > ALTER TABLE vital_records ADD COLUMN patient_id UUID REFERENCES patients(id);
 > CREATE INDEX idx_vital_records_patient_id ON vital_records (patient_id);
 > ```
+
+> **既存テーブルへの追加（人工呼吸器グループ追加時のマイグレーション）**:
+> ```sql
+> ALTER TABLE vital_records
+>     ADD COLUMN set_respiratory_rate     NUMERIC,
+>     ADD COLUMN set_inspiratory_pressure NUMERIC,
+>     ADD COLUMN inspiratory_time         NUMERIC,
+>     ADD COLUMN peep                     NUMERIC,
+>     ADD COLUMN trigger_sensitivity      NUMERIC,
+>     ADD COLUMN inspiratory_flow         NUMERIC;
+> ```
+> 未実行のままだと撮影時の DB 保存に失敗するため、本番 DB にも必ず適用してください。
 
 ### 2. アプリをセットアップする
 

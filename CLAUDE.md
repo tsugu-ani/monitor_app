@@ -60,6 +60,17 @@ Claude Vision API でバイタル情報抽出（API 最終回）
 | ガス流量 Air | `gas_flow_air` | L/min |
 | FiO2 | `fio2` | % |
 
+#### 人工呼吸器
+
+| 項目 | キー名 | 単位 |
+|---|---|---|
+| 設定呼吸回数 | `set_respiratory_rate` | bpm |
+| 設定吸気圧（+PEEP） | `set_inspiratory_pressure` | cmH2O |
+| 吸気時間 | `inspiratory_time` | sec |
+| PEEP | `peep` | cmH2O |
+| トリガ感度 | `trigger_sensitivity` | cmH2O |
+| 吸気流量 | `inspiratory_flow` | L/min |
+
 #### 患者情報（手入力）
 
 AI による抽出対象ではなく、撮影後に修正モーダルから手入力する項目。DB カラムとして `VitalData` に含まれる（patients テーブルとは別管理だが、患者選択時に自動引き継ぎされる）。
@@ -288,6 +299,13 @@ CREATE TABLE vital_records (
     -- 基本バイタル（17項目）
     heart_rate           NUMERIC,
     ...（全17項目）
+    -- 人工呼吸器設定値（6項目）
+    set_respiratory_rate     NUMERIC,
+    set_inspiratory_pressure NUMERIC,
+    inspiratory_time         NUMERIC,
+    peep                     NUMERIC,
+    trigger_sensitivity      NUMERIC,
+    inspiratory_flow         NUMERIC,
     -- 患者情報（手入力 / 後から上書き可）
     chart_number         INTEGER,
     patient_name         TEXT,
@@ -314,6 +332,20 @@ CREATE INDEX idx_patients_chart_number ON patients (chart_number);
 ALTER TABLE vital_records ADD COLUMN patient_id UUID REFERENCES patients(id);
 CREATE INDEX idx_vital_records_patient_id ON vital_records (patient_id);
 ```
+
+マイグレーション（人工呼吸器グループ追加時）:
+
+```sql
+ALTER TABLE vital_records
+    ADD COLUMN set_respiratory_rate     NUMERIC,
+    ADD COLUMN set_inspiratory_pressure NUMERIC,
+    ADD COLUMN inspiratory_time         NUMERIC,
+    ADD COLUMN peep                     NUMERIC,
+    ADD COLUMN trigger_sensitivity      NUMERIC,
+    ADD COLUMN inspiratory_flow         NUMERIC;
+```
+
+> **重要**: このマイグレーションを未実行の場合、`save_record` 実行時に `column does not exist` エラーで保存失敗するため、必ず本番 DB にも適用すること。
 
 ### 接続方式
 

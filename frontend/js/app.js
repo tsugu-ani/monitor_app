@@ -29,6 +29,17 @@ const VITAL_GROUPS = [
             { key: 'fio2',                 label: 'FiO2',          unit: '%'      },
         ],
     },
+    {
+        title: '人工呼吸器',
+        items: [
+            { key: 'set_respiratory_rate',     label: '設定呼吸回数',       unit: 'bpm'   },
+            { key: 'set_inspiratory_pressure', label: '設定吸気圧（+PEEP）',unit: 'cmH2O' },
+            { key: 'inspiratory_time',         label: '吸気時間',           unit: 'sec'   },
+            { key: 'peep',                     label: 'PEEP',               unit: 'cmH2O' },
+            { key: 'trigger_sensitivity',      label: 'トリガ感度',         unit: 'cmH2O' },
+            { key: 'inspiratory_flow',         label: '吸気流量',           unit: 'L/min' },
+        ],
+    },
 ];
 
 // ===== 患者情報項目定義（手入力）=====

@@ -290,37 +290,60 @@ function renderTrendList(records, selectedItems) {
         </span>`
     ).join('');
 
-    [...records].reverse().forEach(r => {
-        const dt = new Date(r.recorded_at);
-        const timeStr = dt.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
-
-        const el = document.createElement('div');
-
-        if (isSingle) {
+    if (isSingle) {
+        // 単一項目: 時刻＋値の行リスト
+        [...records].reverse().forEach(r => {
             const val = r[singleItem.key];
             if (val === null || val === undefined) return;
+            const dt = new Date(r.recorded_at);
+            const timeStr = dt.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+            const el = document.createElement('div');
             el.className = 'trend-list-item';
             el.innerHTML = `
                 <span class="trend-list-time">${timeStr}</span>
                 <span class="trend-list-value" style="color:${singleItem.color}">${formatValue(val)}</span>`;
-        } else {
-            el.className = 'trend-list-item-multi';
-            const valParts = selectedItems.map(si => {
-                const v = r[si.key];
-                if (v === null || v === undefined) return '';
-                return `<span class="trend-list-multi-val">
-                    <span class="trend-list-multi-label" style="color:${si.color}">${si.label}</span>
-                    <span class="trend-list-multi-num">${formatValue(v)}</span>
-                </span>`;
-            }).filter(Boolean).join('');
-            if (!valParts) return;
-            el.innerHTML = `
-                <div class="trend-list-multi-time">${timeStr}</div>
-                <div class="trend-list-multi-values">${valParts}</div>`;
-        }
+            trendListEl.appendChild(el);
+        });
+        return;
+    }
 
-        trendListEl.appendChild(el);
+    // 複数項目: テーブル形式（項目名は1行目のみ、各行は数値のみ）
+    const wrapper = document.createElement('div');
+    wrapper.className = 'trend-list-table-wrapper';
+
+    const table = document.createElement('table');
+    table.className = 'trend-list-table';
+
+    const thead = document.createElement('thead');
+    thead.innerHTML = '<tr><th class="trend-th-time">時刻</th>' +
+        selectedItems.map(si =>
+            `<th class="trend-th-item" style="color:${si.color}">${si.label}</th>`
+        ).join('') + '</tr>';
+    table.appendChild(thead);
+
+    const tbody = document.createElement('tbody');
+    [...records].reverse().forEach(r => {
+        const cells = selectedItems.map(si => {
+            const v = r[si.key];
+            return (v !== null && v !== undefined) ? formatValue(v) : '---';
+        });
+        if (cells.every(c => c === '---')) return;
+
+        const dt = new Date(r.recorded_at);
+        const timeStr = dt.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td class="trend-td-time">${timeStr}</td>` +
+            cells.map(c => {
+                const cls = c === '---' ? 'trend-td-null' : 'trend-td-num';
+                return `<td class="${cls}">${c}</td>`;
+            }).join('');
+        tbody.appendChild(tr);
     });
+    table.appendChild(tbody);
+
+    wrapper.appendChild(table);
+    trendListEl.appendChild(wrapper);
 }
 
 // ===== イベントリスナー =====

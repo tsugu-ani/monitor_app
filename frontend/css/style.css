@@ -949,48 +949,59 @@ main {
     text-align: center;
 }
 
-/* 複数項目選択時の一覧 */
-.trend-list-item-multi {
-    padding: 8px 14px;
-    border-bottom: 1px solid var(--border);
+/* 複数項目選択時のテーブル形式一覧 */
+.trend-list-table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
-.trend-list-item-multi:last-child { border-bottom: none; }
+.trend-list-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+}
 
-.trend-list-multi-time {
+.trend-list-table th,
+.trend-list-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+}
+
+.trend-list-table tr:last-child td { border-bottom: none; }
+
+.trend-list-table .trend-th-time,
+.trend-list-table .trend-th-item {
+    font-size: 11px;
+    font-weight: 700;
+    background: var(--bg);
+    text-align: right;
+    position: sticky;
+    top: 0;
+}
+
+.trend-list-table .trend-th-time {
+    text-align: left;
+    color: var(--text-muted);
+}
+
+.trend-list-table .trend-td-time {
     font-size: 12px;
     color: var(--text-muted);
-    font-variant-numeric: tabular-nums;
-    margin-bottom: 5px;
+    text-align: left;
 }
 
-.trend-list-multi-values {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px 14px;
-}
-
-.trend-list-multi-val {
-    display: inline-flex;
-    align-items: baseline;
-    gap: 3px;
-}
-
-.trend-list-multi-label {
-    font-size: 11px;
-    font-weight: 500;
-}
-
-.trend-list-multi-num {
+.trend-list-table .trend-td-num {
     font-size: 15px;
     font-weight: 700;
-    font-variant-numeric: tabular-nums;
     color: var(--filled-value);
+    text-align: right;
 }
 
-.trend-list-multi-unit {
-    font-size: 10px;
-    color: var(--text-muted);
+.trend-list-table .trend-td-null {
+    font-size: 13px;
+    color: var(--null-value);
+    text-align: right;
 }
 
 /* ===== 記録カード 編集ボタン ===== */

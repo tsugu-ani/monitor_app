@@ -142,7 +142,7 @@ function initTrendDefaults() {
     const now = new Date();
     trendDateInput.value    = dateToYMD(now);
     trendStartTimeEl.value  = '00:00';
-    trendEndTimeEl.value    = dateToHM(now);
+    trendEndTimeEl.value    = '23:59';
 }
 
 // 前日・翌日ボタン
@@ -280,9 +280,10 @@ function clearChart() {
     }
 }
 
-// ===== 一覧（新しい順） =====
-// 単一・複数項目とも同じテーブル形式で表示する。
-// 列ヘッダーに「項目名 (単位)」を1度だけ表示し、各行は時刻と数値のみ。
+// ===== 一覧（時刻昇順） =====
+// 行が項目、列が時刻のテーブル形式で表示する。
+// 1列目に「項目名 (単位)」を表示し、各列ヘッダーに時刻を表示する。
+// 1列目はスティッキーで横スクロール時もラベルが見えるようにする。
 
 function renderTrendList(records, selectedItems) {
     trendListEl.innerHTML = '';
@@ -293,30 +294,25 @@ function renderTrendList(records, selectedItems) {
     const table = document.createElement('table');
     table.className = 'trend-list-table';
 
+    // ヘッダー行: 左上コーナー + 各時刻
+    const timeHeaders = records.map(r => {
+        const t = new Date(r.recorded_at).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+        return `<th class="trend-th-time">${t}</th>`;
+    }).join('');
     const thead = document.createElement('thead');
-    thead.innerHTML = '<tr><th class="trend-th-time">時刻</th>' +
-        selectedItems.map(si =>
-            `<th class="trend-th-item" style="color:${si.color}">${si.label} (${si.unit})</th>`
-        ).join('') + '</tr>';
+    thead.innerHTML = `<tr><th class="trend-th-corner"></th>${timeHeaders}</tr>`;
     table.appendChild(thead);
 
+    // データ行: 項目ごとに横方向の値リスト
     const tbody = document.createElement('tbody');
-    [...records].reverse().forEach(r => {
-        const cells = selectedItems.map(si => {
+    selectedItems.forEach(si => {
+        const cells = records.map(r => {
             const v = r[si.key];
-            return (v !== null && v !== undefined) ? formatValue(v) : '---';
-        });
-        if (cells.every(c => c === '---')) return;
-
-        const dt = new Date(r.recorded_at);
-        const timeStr = dt.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
-
+            if (v === null || v === undefined) return '<td class="trend-td-null">---</td>';
+            return `<td class="trend-td-num">${formatValue(v)}</td>`;
+        }).join('');
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td class="trend-td-time">${timeStr}</td>` +
-            cells.map(c => {
-                const cls = c === '---' ? 'trend-td-null' : 'trend-td-num';
-                return `<td class="${cls}">${c}</td>`;
-            }).join('');
+        tr.innerHTML = `<th class="trend-th-item" style="color:${si.color}">${si.label} (${si.unit})</th>${cells}`;
         tbody.appendChild(tr);
     });
     table.appendChild(tbody);
@@ -389,8 +385,9 @@ function trendPushRecord(record) {
 
     trendRecordsCache.push(record);
     trendRecordsCache.sort((a, b) => new Date(a.recorded_at) - new Date(b.recorded_at));
-    // 終了時刻を新しいレコードに合わせて延長（次回「更新」時に漏れなく取得するため）
-    trendEndTimeEl.value = dateToHM(recDate);
+    // 終了時刻を新しいレコードに合わせて延長（短縮はしない。次回「更新」時に漏れなく取得するため）
+    const recHM = dateToHM(recDate);
+    if (recHM > trendEndTimeEl.value) trendEndTimeEl.value = recHM;
 }
 
 // 初期化
